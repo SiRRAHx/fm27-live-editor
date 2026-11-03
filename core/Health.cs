@@ -77,7 +77,7 @@ public static class Health
         if (Record(p) != rec || !Same(Mem.Read(rec + InjuriesAt, 16), head)) throw new EditorError("The game changed his injuries. Nothing was written.", 409);
         // end = begin
         if (!Mem.Write(rec + InjuriesAt + 8, head.Take(8).ToArray())) throw new EditorError("The game refused the change.", 500);
-        Plugin.Logger.LogInfo($"Healed {injuries.Count} injuries of the player at 0x{p:X}");
+        Log.Info($"Healed {injuries.Count} injuries of the player at 0x{p:X}");
         return injuries.Count;
     }
 
@@ -95,7 +95,7 @@ public static class Health
         if (Record(p) != rec || !Same(Mem.Read(rec + AbsencesAt, 16), head)) throw new EditorError("The game changed his bans. Nothing was written.", 409);
         if (keep.Count > 0 && !Mem.Write(begin, keep.SelectMany(BitConverter.GetBytes).ToArray())) throw new EditorError("The game refused the change.", 500);
         if (!Mem.Write(rec + AbsencesAt + 8, BitConverter.GetBytes(begin + 8L * keep.Count))) throw new EditorError("The game refused the change.", 500);
-        Plugin.Logger.LogInfo($"Lifted {lifted} bans of the player at 0x{p:X}");
+        Log.Info($"Lifted {lifted} bans of the player at 0x{p:X}");
         return lifted;
     }
 

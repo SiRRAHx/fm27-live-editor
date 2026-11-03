@@ -36,7 +36,7 @@ public static class Backup
                 throw new EditorError($"Couldn't back up your saves ({e.Message}), so nothing was changed.", 500);
             }
             Done = DateTime.Now;
-            Plugin.Logger.LogInfo("Saves backed up to " + dest);
+            Log.Info("Saves backed up to " + dest);
             foreach (var old in new DirectoryInfo(Folder).GetDirectories().OrderByDescending(d => d.Name).Skip(5))
                 try { old.Delete(true); } catch { }
         }

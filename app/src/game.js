@@ -1,4 +1,4 @@
-// Talks to the editor's plugin inside FM27. The plugin serves a small JSON API
+// Talks to the editor's engine (engine/), which attaches to FM27 and serves a small JSON API
 // on this PC only (127.0.0.1), so nothing is reachable from the network.
 const BASE = 'http://127.0.0.1:27270/api';
 
@@ -7,12 +7,12 @@ async function call(path, opts = {}) {
   try {
     res = await fetch(BASE + path, {
       ...opts,
-      // The plugin only answers requests that carry this header.
+      // The engine only answers requests that carry this header.
       headers: { 'Content-Type': 'application/json', 'X-FM27-Editor': '1' },
       signal: AbortSignal.timeout(opts.timeout || 8000),
     });
   } catch {
-    const e = new Error('FM27 isn\'t running with the editor plugin.');
+    const e = new Error("The editor engine isn't running. Restart the editor.");
     e.offline = true;
     throw e;
   }

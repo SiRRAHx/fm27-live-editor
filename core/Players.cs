@@ -133,7 +133,7 @@ public static class Players
         new Thread(() =>
         {
             try { BuildIndex(recheck); }
-            catch (Exception e) { LastError = e.Message; Plugin.Logger.LogWarning("index: " + e); }
+            catch (Exception e) { LastError = e.Message; Log.Warn("index: " + e); }
             finally { Indexing = false; }
         }) { IsBackground = true, Name = "FM27LiveEditor index" }.Start();
     }
@@ -166,11 +166,11 @@ public static class Players
         summaries.Sort((a, b) => string.Compare(a.name, b.name, StringComparison.CurrentCultureIgnoreCase));
         lock (gate)
         {
-            if (recheck && summaries.Count <= list.Count) { Plugin.Logger.LogInfo($"Index recheck found {summaries.Count} players; keeping {list.Count}"); return; }
+            if (recheck && summaries.Count <= list.Count) { Log.Info($"Index recheck found {summaries.Count} players; keeping {list.Count}"); return; }
             byId = found; list = summaries;
         }
         IndexedAt = DateTime.Now;
-        Plugin.Logger.LogInfo($"Indexed {summaries.Count} players in {(DateTime.Now - started).TotalSeconds:F1}s");
+        Log.Info($"Indexed {summaries.Count} players in {(DateTime.Now - started).TotalSeconds:F1}s");
     }
 
     static string EntryName(long entryPtr) => entryPtr == 0 ? null : Mem.ReadLenString(Mem.ReadPtr(entryPtr));
@@ -536,7 +536,7 @@ public static class Players
                 if (now == null || !now.SequenceEqual(was)) throw new EditorError("The game changed the contract's clauses. The rest wasn't changed.", 409);
                 if (!Mem.Write(entry + at, value)) throw new EditorError("The game refused the change. Nothing more was written.", 500);
             }
-            Plugin.Logger.LogInfo($"Edited {Summary(p)?.name} ({id}): {writes.Count + abilityWrites.Count + contractWrites.Count + clauseWrites.Count} values");
+            Log.Info($"Edited {Summary(p)?.name} ({id}): {writes.Count + abilityWrites.Count + contractWrites.Count + clauseWrites.Count} values");
         }
         return Get(id);
     }
@@ -559,7 +559,7 @@ public static class Layout
         int image = BitConverter.ToInt32(size, 0);
         if (image != KnownImageSize)
         {
-            Plugin.Logger.LogWarning($"game_plugin.dll size is 0x{image:X}, expected 0x{KnownImageSize:X}");
+            Log.Warn($"game_plugin.dll size is 0x{image:X}, expected 0x{KnownImageSize:X}");
             return false;
         }
         return true;

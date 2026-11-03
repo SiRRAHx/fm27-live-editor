@@ -159,7 +159,7 @@ public static class Clubs
         if (players.Count == 0) throw new EditorError("Couldn't find this club's players.", 400);
         Backup.EnsureBackedUp();
         int changed = players.Count(p => Players.WriteStatus(p, values) > 0);
-        Plugin.Logger.LogInfo($"Set {string.Join(", ", values.Keys)} for {changed} of {players.Count} players at {Players.ClubName(club)}");
+        Log.Info($"Set {string.Join(", ", values.Keys)} for {changed} of {players.Count} players at {Players.ClubName(club)}");
         return changed;
     }
 
@@ -215,7 +215,7 @@ public static class Clubs
             if (Id(club) != id) throw new EditorError("The game moved its data. Nothing was changed.", 409);
             foreach (var (at, value) in other)
                 if (!Mem.Write(at, value)) throw new EditorError("The game refused the change. Nothing more was written.", 500);
-            if (other.Count > 0) Plugin.Logger.LogInfo($"Edited reputation/facilities of {Players.ClubName(club)} ({id}): {other.Count} values");
+            if (other.Count > 0) Log.Info($"Edited reputation/facilities of {Players.ClubName(club)} ({id}): {other.Count} values");
         }
         if (writes.Count > 0)
         {
@@ -223,7 +223,7 @@ public static class Clubs
             if (Finances(club) != f || Id(club) != id) throw new EditorError("The game moved its data. Nothing was changed.", 409);
             foreach (var (at, value) in writes)
                 if (!Mem.Write(f + at, BitConverter.GetBytes(value))) throw new EditorError("The game refused the change. Nothing more was written.", 500);
-            Plugin.Logger.LogInfo($"Edited the finances of {Players.ClubName(club)} ({id}): {writes.Count} values");
+            Log.Info($"Edited the finances of {Players.ClubName(club)} ({id}): {writes.Count} values");
         }
         return Get(id);
     }

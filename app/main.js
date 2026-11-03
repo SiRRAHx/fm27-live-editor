@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, shell, protocol, net } = require('electron');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -105,8 +106,22 @@ async function image(req) {
   return new Response(PLACEHOLDER[kind], { headers: { 'content-type': 'image/svg+xml', 'cache-control': 'no-store' } });
 }
 
+// The engine does the editing: it attaches to FM27 from outside and answers on 127.0.0.1.
+// It's started with the app and stops when the app closes (it watches our process id).
+let engine;
+function startEngine() {
+  const exe = app.isPackaged
+    ? path.join(process.resourcesPath, 'engine', 'FM27LiveEditor.Engine.exe')
+    : path.join(__dirname, '..', 'engine', 'bin', 'out', 'FM27LiveEditor.Engine.exe');
+  if (!fs.existsSync(exe)) { console.error('The editor engine is missing:', exe); return; }
+  engine = spawn(exe, ['--parent', String(process.pid)], { windowsHide: true, stdio: 'ignore' });
+  engine.on('exit', (code) => { if (code) console.error('The editor engine stopped with code', code); engine = null; });
+}
+app.on('will-quit', () => { if (engine) engine.kill(); });
+
 app.whenReady().then(() => {
   protocol.handle('fmimg', image);
+  if (!demo) startEngine();
   if (!demo) graphics.load();
   createWindow();
 });

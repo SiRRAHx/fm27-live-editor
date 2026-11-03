@@ -33,7 +33,6 @@ public class MenuButton : MonoBehaviour
 
     void Update()
     {
-        MainThread.Drain();
         if (Time.realtimeSinceStartup < next || failures > 5) return;
         next = Time.realtimeSinceStartup + 1f;
         try { AddIfMissing(); }

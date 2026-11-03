@@ -30,10 +30,10 @@ public static class Server
                     var client = listener.AcceptTcpClient();
                     ThreadPool.QueueUserWorkItem(_ => Handle(client));
                 }
-                catch (Exception e) { Plugin.Logger.LogWarning("server: " + e.Message); Thread.Sleep(1000); }
+                catch (Exception e) { Log.Warn("server: " + e.Message); Thread.Sleep(1000); }
             }
         }) { IsBackground = true, Name = "FM27LiveEditor server" }.Start();
-        Plugin.Logger.LogInfo($"Editor connection open on 127.0.0.1:{Port}");
+        Log.Info($"Editor connection open on 127.0.0.1:{Port}");
     }
 
     static void Handle(TcpClient client)
@@ -55,7 +55,7 @@ public static class Server
         {
             status = 500;
             body = new Dictionary<string, object> { ["error"] = "Something went wrong in the editor plugin: " + e.Message };
-            Plugin.Logger.LogWarning("request: " + e);
+            Log.Warn("request: " + e);
         }
         var json = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(body));
         var head = Encoding.ASCII.GetBytes($"HTTP/1.1 {status} {(status == 200 ? "OK" : "Error")}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {json.Length}\r\nConnection: close\r\n\r\n");
@@ -117,7 +117,7 @@ public static class Server
         if (parts.Length < 2 || parts[0] != "api") throw new EditorError("Not found.", 404);
 
         if (parts[1] == "status" && method == "GET") return Status();
-        if (!Plugin.Editing) throw new EditorError(Plugin.Reason, 503);
+        if (!Host.Editing) throw new EditorError(Host.Reason, 503);
         if (parts[1] == "research" && parts.Length == 3) return Research.Route(method, parts[2], q, content);
         if (parts[1] == "players")
         {
@@ -200,20 +200,22 @@ public static class Server
 
     static object Status()
     {
+        bool editing = Host.Editing;
         // Index the career once one is loaded, and again after another save is loaded.
-        if (Plugin.Editing && !Players.Indexing && (Players.Count == 0 || !Players.StillValid()) && DateTime.Now - lastIndexTry > TimeSpan.FromSeconds(20))
+        if (Host.Editing && !Players.Indexing && (Players.Count == 0 || !Players.StillValid()) && DateTime.Now - lastIndexTry > TimeSpan.FromSeconds(20))
         {
             lastIndexTry = DateTime.Now;
             Players.StartIndex();
         }
-        else if (Plugin.Editing && !Players.Indexing && !Players.Rechecked && Players.Count > 0 && DateTime.Now - Players.IndexedAt > TimeSpan.FromSeconds(30))
+        else if (Host.Editing && !Players.Indexing && !Players.Rechecked && Players.Count > 0 && DateTime.Now - Players.IndexedAt > TimeSpan.FromSeconds(30))
             Players.StartIndex(recheck: true);
         return new Dictionary<string, object>
         {
             ["game"] = "FM27",
-            ["editorVersion"] = Plugin.Version,
-            ["editing"] = Plugin.Editing,
-            ["reason"] = Plugin.Editing ? null : Plugin.Reason,
+            ["fmRunning"] = Mem.Pid != 0,
+            ["editorVersion"] = Host.Version,
+            ["editing"] = editing,
+            ["reason"] = editing ? null : Host.Reason,
             ["indexing"] = Players.Indexing,
             ["players"] = Players.Count,
             ["saveLoaded"] = Players.Count > 0,

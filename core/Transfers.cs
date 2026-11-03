@@ -232,7 +232,7 @@ public static class Transfers
             done++;
         }
         last = ps; lastText = text;
-        Plugin.Logger.LogInfo($"{text}: {ps.Count} writes");
+        Log.Info($"{text}: {ps.Count} writes");
     }
 
     public static Dictionary<string, object> Move(MoveRequest req)
@@ -373,7 +373,7 @@ public static class Transfers
             foreach (var x in Enumerable.Reverse(last))
                 if (!Mem.Write(x.at, x.was)) throw new EditorError("The game refused the undo part-way. Load your backup.", 500);
             string text = "Undid: " + lastText;
-            Plugin.Logger.LogInfo(text);
+            Log.Info(text);
             last = null; lastText = null;
             return new() { ["ok"] = true, ["message"] = text };
         }

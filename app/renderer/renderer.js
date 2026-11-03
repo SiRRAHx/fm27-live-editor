@@ -60,7 +60,7 @@ async function pollStatus() {
   try { status = await window.api.status(); } catch (e) { status = { connected: true, error: e.message }; }
   const g = $('#status-game');
   const s = $('#status-save');
-  if (!status.connected) {
+  if (!status.connected || status.fmRunning === false) {
     g.className = 'status-item idle';
     g.textContent = 'Waiting for FM27…';
     s.classList.add('hidden');
@@ -76,7 +76,7 @@ async function pollStatus() {
       : status.indexing ? 'Finding players…' : 'Load a career to start editing';
   }
   $('#status-backup').textContent = status.backup ? `Save backed up ${status.backup}` : '';
-  const ready = status.connected && !status.error && status.editing !== false && status.saveLoaded;
+  const ready = status.connected && status.fmRunning !== false && !status.error && status.editing !== false && status.saveLoaded;
   const clubsHidden = $('#clubs-ui').classList.contains('hidden');
   $('#clubs-ui').classList.toggle('hidden', !ready);
   $('#clubs-offline').classList.toggle('hidden', ready);

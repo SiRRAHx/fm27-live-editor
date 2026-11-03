@@ -1,13 +1,9 @@
-// Read-only routes used while working out more of FM's layout (CA/PA, clubs,
-// contracts). They're off unless BepInEx\config\FM27LiveEditor.research exists,
-// and they never write anything.
+// Research only: off unless BepInEx\config\FM27LiveEditor.research exists.
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json;
 using BepInEx;
 
 namespace FM27LiveEditor;
@@ -15,99 +11,6 @@ namespace FM27LiveEditor;
 public static class Research
 {
     public static bool On => File.Exists(Path.Combine(Paths.ConfigPath, "FM27LiveEditor.research"));
-
-    public class ReadRequest
-    {
-        public List<string> addrs { get; set; }
-        public int len { get; set; }
-    }
-
-    public static object Route(string method, string what, string q, string content)
-    {
-        if (!On) throw new EditorError("Not found.", 404);
-        var args = q.Split('&').Select(kv => kv.Split('=', 2)).Where(a => a.Length == 2).ToDictionary(a => a[0], a => a[1]);
-        int Arg(string k, int d) => args.TryGetValue(k, out var v) ? (v.StartsWith("-0x") ? -Convert.ToInt32(v[3..], 16) : v.StartsWith("0x") ? Convert.ToInt32(v[2..], 16) : int.Parse(v)) : d;
-
-        if (what == "dump" && method == "GET")
-        {
-            int len = Math.Clamp(Arg("len", 0x600), 8, 0x2000);
-            return Players.Dump(Math.Clamp(Arg("n", 3000), 1, 20000), Arg("from", -0x288), len);
-        }
-        if (what == "read" && method == "POST")
-        {
-            var req = JsonSerializer.Deserialize<ReadRequest>(content) ?? new ReadRequest();
-            int len = Math.Clamp(req.len, 1, 0x1000);
-            return (req.addrs ?? new()).Take(20000).Select(a =>
-            {
-                var b = long.TryParse(a, System.Globalization.NumberStyles.HexNumber, null, out long addr) ? Mem.Read(addr, len) : null;
-                return b == null ? null : Convert.ToBase64String(b);
-            }).ToList();
-        }
-        if (what == "person" && method == "GET") return Players.Find(Arg("id", 0)).ToString("X");
-        // Names of the textures Unity has loaded, to see how FM names its photos and badges.
-        if (what == "textures" && method == "GET")
-        {
-            string filter = args.TryGetValue("q", out var fq) ? Uri.UnescapeDataString(fq) : "";
-            return MainThread.Run(() =>
-            {
-                var all = UnityEngine.Resources.FindObjectsOfTypeAll(Il2CppInterop.Runtime.Il2CppType.Of<UnityEngine.Texture2D>());
-                var names = new List<string>();
-                for (int i = 0; i < all.Length && names.Count < 2000; i++)
-                {
-                    var t = all[i].Cast<UnityEngine.Texture2D>();
-                    if (filter == "" || (t.name ?? "").Contains(filter, StringComparison.OrdinalIgnoreCase)) names.Add($"{t.name} {t.width}x{t.height}");
-                }
-                return new Dictionary<string, object> { ["count"] = all.Length, ["names"] = names };
-            });
-        }
-        if (what == "module" && method == "GET") return Mem.ModuleBase("game_plugin.dll").ToString("X");
-        if (what == "events" && method == "GET") return Events.Recent();
-        if (what == "club" && method == "GET") return Clubs.Find(Arg("id", 0)).ToString("X");
-        // Which heap blocks hold these addresses (to see whether the game's lists
-        // come from the C runtime heap). Pauses the game's allocations while it walks.
-        if (what == "heap" && method == "POST")
-        {
-            var req = JsonSerializer.Deserialize<ReadRequest>(content) ?? new ReadRequest();
-            var want = (req.addrs ?? new()).Take(200).Select(a => long.Parse(a, System.Globalization.NumberStyles.HexNumber)).ToList();
-            return HeapInfo(want);
-        }
-        throw new EditorError("Not found.", 404);
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct HeapEntry { public IntPtr lpData; public uint cbData; public byte cbOverhead, iRegionIndex; public ushort wFlags; public IntPtr a, b, c; }
-    [DllImport("kernel32")] static extern IntPtr GetProcessHeap();
-    [DllImport("kernel32")] static extern bool HeapLock(IntPtr h);
-    [DllImport("kernel32")] static extern bool HeapUnlock(IntPtr h);
-    [DllImport("kernel32")] static extern bool HeapWalk(IntPtr h, ref HeapEntry e);
-    [DllImport("ucrtbase")] static extern IntPtr _get_heap_handle();
-
-    static object HeapInfo(List<long> want)
-    {
-        var heap = GetProcessHeap();
-        var found = new Dictionary<string, object>();
-        long blocks = 0;
-        var started = DateTime.Now;
-        if (!HeapLock(heap)) throw new EditorError("Couldn't lock the heap.", 500);
-        try
-        {
-            var e = new HeapEntry();
-            while (HeapWalk(heap, ref e))
-            {
-                if ((e.wFlags & 0x4) == 0) continue; // busy blocks only
-                blocks++;
-                long start = (long)e.lpData, end = start + e.cbData;
-                foreach (var w in want)
-                    if (w >= start && w < end) found[w.ToString("X")] = new { block = start.ToString("X"), size = e.cbData };
-            }
-        }
-        finally { HeapUnlock(heap); }
-        return new
-        {
-            processHeap = ((long)heap).ToString("X"), crtHeap = ((long)_get_heap_handle()).ToString("X"),
-            blocks, seconds = (DateTime.Now - started).TotalSeconds, found,
-        };
-    }
 }
 
 // Research only: records the events FM's screens send to the game (e.g. while

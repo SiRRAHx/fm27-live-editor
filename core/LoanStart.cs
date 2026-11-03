@@ -7,7 +7,6 @@
 // refuses instead of calling the wrong thing.
 using System;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace FM27LiveEditor;
@@ -21,9 +20,6 @@ public static class LoanStart
     const int PersonAt = 0x18, LoanTeamAt = 0x20, StartsAt = 0x30, EndsAt = 0x34, OtherDateAt = 0x38;
     const int MonthlyFeeAt = 0x5C, FutureFeeAt = 0x60, WageShareAt = 0x6C;
     const int TeamAt = -0x158;
-
-    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-    delegate void StartLoan(IntPtr manager, IntPtr offer, byte flag);
 
     public class Request
     {
@@ -96,20 +92,31 @@ public static class LoanStart
         BitConverter.GetBytes((short)req.wageShare).CopyTo(f, WageShareAt);
 
         Backup.EnsureBackedUp();
-        var call = Marshal.GetDelegateForFunctionPointer<StartLoan>(new IntPtr(mod + StartLoanRva));
-        IntPtr mem = Marshal.AllocHGlobal(0x100);
-        try
+        Log.Info($"Starting a loan: player 0x{p:X} to team 0x{team:X} until {req.ends}");
+        // FM runs its own start-loan function on a short-lived thread of its own (Mem.CallInGame),
+        // with the form copied into its memory: start-loan(manager, form, 1).
+        var stub = new byte[]
         {
-            Marshal.Copy(new byte[0x100], 0, mem, 0x100);
-            Marshal.Copy(f, 0, mem, Size);
-            Plugin.Logger.LogInfo($"Starting a loan: player 0x{p:X} to team 0x{team:X} until {req.ends}");
-            MainThread.Run(() => { call(new IntPtr(manager), mem, 1); return true; }, 15000);
-        }
-        finally { Marshal.FreeHGlobal(mem); }
+            0x48, 0x83, 0xEC, 0x28,                         // sub rsp, 0x28
+            0x48, 0x89, 0xCA,                               // mov rdx, rcx       (the form)
+            0x48, 0xB8, 0, 0, 0, 0, 0, 0, 0, 0,             // mov rax, &manager
+            0x48, 0x8B, 0x08,                               // mov rcx, [rax]
+            0x41, 0xB8, 0x01, 0x00, 0x00, 0x00,             // mov r8d, 1
+            0x48, 0xB8, 0, 0, 0, 0, 0, 0, 0, 0,             // mov rax, start-loan
+            0xFF, 0xD0,                                     // call rax
+            0x48, 0x83, 0xC4, 0x28,                         // add rsp, 0x28
+            0x31, 0xC0,                                     // xor eax, eax
+            0xC3,                                           // ret
+        };
+        BitConverter.GetBytes(mod + LoanManagerRva).CopyTo(stub, 9);
+        BitConverter.GetBytes(mod + StartLoanRva).CopyTo(stub, 28);
+        var form = new byte[0x100];
+        f.CopyTo(form, 0);
+        Mem.CallInGame(stub, form, 15000);
         Players.Refresh(req.player);
         string name = Players.Summary(p)?.name ?? "The player", to = Players.TeamClub(team) ?? "the new club";
         if (Loans.Find(p) == 0) throw new EditorError($"FM didn't start the loan. {name} is still at his club.", 500);
-        Plugin.Logger.LogInfo($"Loaned {name} to {to}");
+        Log.Info($"Loaned {name} to {to}");
         return new { ok = true, message = $"Loaned {name} to {to} until {ends:d MMM yyyy}", canUndo = false };
     }
 }

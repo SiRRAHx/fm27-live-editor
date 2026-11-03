@@ -92,7 +92,7 @@ public static class Loans
         if (Find(p) != loan) throw new EditorError("The game moved the loan. It wasn't changed.", 409);
         foreach (var (at, value) in writes)
             if (!Mem.Write(loan + at, value)) throw new EditorError("The game refused the change. Nothing more was written.", 500);
-        Plugin.Logger.LogInfo($"Edited the loan of player at 0x{p:X}: {writes.Count} values");
+        Log.Info($"Edited the loan of player at 0x{p:X}: {writes.Count} values");
         return writes.Count;
     }
 }
