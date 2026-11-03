@@ -1,15 +1,69 @@
 {
   "name": "fm27-live-editor",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Free live editor for Football Manager 27",
   "main": "main.js",
   "author": "Liam Harris",
   "private": true,
   "scripts": {
     "start": "electron .",
-    "demo": "electron . --demo"
+    "demo": "electron . --demo",
+    "dist": "electron-builder --win nsis"
   },
   "devDependencies": {
-    "electron": "^38.2.0"
-  }
+    "electron": "^38.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.local.fm27liveeditor",
+    "productName": "FM27 Live Editor",
+    "copyright": "Liam Harris",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**",
+      "renderer/**",
+      "build/icon.ico",
+      "build/icon.png",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../engine/bin/out/FM27LiveEditor.Engine.exe",
+        "to": "engine/FM27LiveEditor.Engine.exe"
+      },
+      {
+        "from": "../vendor/bepinex",
+        "to": "bepinex"
+      },
+      {
+        "from": "../plugin/bin/out/FM27LiveEditor.dll",
+        "to": "addon/FM27LiveEditor.dll"
+      },
+      {
+        "from": "../THIRD-PARTY-NOTICES.md",
+        "to": "THIRD-PARTY-NOTICES.md"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "artifactName": "FM27-Live-Editor-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "FM27 Live Editor",
+      "uninstallDisplayName": "FM27 Live Editor"
+    },
+    "publish": null
+  },
+  "repository": "https://github.com/SiRRAHx/fm27-live-editor"
 }

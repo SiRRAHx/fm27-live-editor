@@ -694,3 +694,31 @@ document.querySelectorAll('.bg-option').forEach((b) => b.addEventListener('click
   await pollStatus();
   setInterval(pollStatus, 3000);
 })();
+
+// --- In-game button (Settings) ---
+async function renderAddon(promise) {
+  const state = $('#addon-state'), actions = $('#addon-actions');
+  let a;
+  try { a = await (promise || window.api.addonStatus()); } catch (e) { toast(e.message, true); a = await window.api.addonStatus(); }
+  const btn = (text, fn, cls = 'btn') => h('button', { class: cls, onclick: async (ev) => { ev.target.disabled = true; await renderAddon(fn()); } }, text);
+  if (status.demo) { state.textContent = 'Not available in demo mode.'; actions.replaceChildren(); return; }
+  if (!a.folder) {
+    state.textContent = "Couldn't find FM27 by itself. Pick the folder that has fm.exe in it.";
+    actions.replaceChildren(btn('Find FM27 folder…', () => window.api.addonInstall(null), 'btn primary'));
+    return;
+  }
+  const where = `FM27 is in ${a.folder}.`;
+  const closeFirst = a.fmRunning ? ' Close FM27 to change this.' : '';
+  if (!a.installed) {
+    state.textContent = `${where} The button isn't set up.${closeFirst}`;
+    actions.replaceChildren(btn('Set up the button', () => window.api.addonInstall(a.folder), 'btn primary'), btn('Other folder…', () => window.api.addonInstall(null)));
+  } else if (a.on) {
+    state.textContent = `${where} The button is on: it appears next time FM27 starts.${closeFirst}`;
+    actions.replaceChildren(btn('Turn off', () => window.api.addonOn(false)), btn('Remove button', () => window.api.addonRemove()), btn('Update', () => window.api.addonInstall(a.folder)));
+  } else {
+    state.textContent = `${where} The button is turned off: FM27 starts without BepInEx or any other mods.${closeFirst}`;
+    actions.replaceChildren(btn('Turn on', () => window.api.addonOn(true), 'btn primary'), btn('Remove button', () => window.api.addonRemove()));
+  }
+  actions.querySelectorAll('button').forEach((b) => { b.disabled = a.fmRunning || (!a.available && /Set up|Update/.test(b.textContent)); });
+}
+document.querySelector('[data-tab=settings]').addEventListener('click', () => renderAddon());

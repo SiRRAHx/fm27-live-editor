@@ -20,3 +20,10 @@ research/research-registry.txt
 research/__pycache__/
 tools/**/bin/
 tools/**/obj/
+
+# BepInEx bundle (copied from a game install by tools/bundle-bepinex.js)
+vendor/bepinex/
+
+# raw game logs and memory diffs (can hold local paths and save names)
+research/*-calls-*.txt
+research/*-diff.txt

@@ -15,4 +15,8 @@ contextBridge.exposeInMainWorld('api', {
   transferStatus: () => ipcRenderer.invoke('transfer-status'),
   transfer: (action, req) => ipcRenderer.invoke('transfer', action, req),
   openUrl: (url) => ipcRenderer.invoke('open-url', url),
+  addonStatus: () => ipcRenderer.invoke('addon-status'),
+  addonInstall: (folder) => ipcRenderer.invoke('addon-install', folder),
+  addonOn: (on) => ipcRenderer.invoke('addon-on', on),
+  addonRemove: () => ipcRenderer.invoke('addon-remove'),
 });

@@ -1,10 +1,11 @@
-const { app, BrowserWindow, ipcMain, shell, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, protocol, net, dialog } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const graphics = require('./src/graphics');
 const store = require('./src/store');
+const addon = require('./src/addon');
 const { GROUPS, POSITIONS, SQUAD_STATUSES, label } = require('./src/attributes');
 
 // --demo uses made-up players, so the window can be tried without FM27.
@@ -60,6 +61,17 @@ ipcMain.handle('save-squad', (_e, id, values) => game.saveSquad(id, values));
 ipcMain.handle('transfer-status', () => game.transferStatus());
 ipcMain.handle('transfer', (_e, action, req) => game.transfer(action, req));
 ipcMain.handle('open-url', (_e, url) => /^https:\/\//.test(url) && shell.openExternal(url));
+ipcMain.handle('addon-status', () => addon.status());
+ipcMain.handle('addon-install', async (_e, folder) => {
+  if (!folder) {
+    const pick = await dialog.showOpenDialog(win, { title: 'Find your FM27 folder (the one with fm.exe)', properties: ['openDirectory'] });
+    if (pick.canceled || !pick.filePaths[0]) return addon.status();
+    folder = pick.filePaths[0];
+  }
+  return addon.install(folder);
+});
+ipcMain.handle('addon-on', (_e, on) => addon.setOn(on));
+ipcMain.handle('addon-remove', () => addon.remove());
 
 // The in-game "Live Editor" button opens a shortcut to this copy of the app in
 // Documents\FM27 Live Editor. (Game Pass FM runs sandboxed and can't see links

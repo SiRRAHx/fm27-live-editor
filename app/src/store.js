@@ -11,8 +11,10 @@ function getSettings() {
   return {
     background: s.background || 'carbon',
     theme: s.theme || 'emerald',
-    // The clubs you manage: players are never moved out of them.
+    // The clubs you manage: the editor warns before a player leaves one.
     myClubs: Array.isArray(s.myClubs) ? s.myClubs : [],
+    // Where FM27 is installed, once the in-game button has been set up.
+    gameFolder: typeof s.gameFolder === 'string' ? s.gameFolder : null,
   };
 }
 
