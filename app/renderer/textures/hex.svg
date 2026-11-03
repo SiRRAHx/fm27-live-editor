@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="42" height="72.75" viewBox="0 0 42 72.75">
+  <!-- Faint honeycomb, like goal netting. Tiles seamlessly. -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1.2">
+    <path d="M21 0 L42 12.125 L42 36.375 L21 48.5 L0 36.375 L0 12.125 Z"/>
+    <path d="M21 48.5 L21 72.75"/>
+    <path d="M0 36.375 L0 60.625 M42 36.375 L42 60.625"/>
+  </g>
+</svg>

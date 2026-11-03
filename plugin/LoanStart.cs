@@ -1,0 +1,115 @@
+// Starts a real loan the way FM's own database loader does at the start of a career: it fills
+// in a db::STARTING_LOAN (a short-lived form; FM's loader keeps it on the stack) and hands it to
+// FM's start-loan function, which takes a LOAN_CONTRACT from FM's own pool and links it to the
+// player and both clubs (tested 3 Nov: Heaven to Wigan, Munro to Swansea at 50%).
+// The addresses are for game_plugin.dll 27.0 dated 2 Nov 2026 (research/loan-contract.md). Each
+// call first checks they still point at the same classes and code, so after a game update it
+// refuses instead of calling the wrong thing.
+using System;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+
+namespace FM27LiveEditor;
+
+public static class LoanStart
+{
+    const long StartingLoanVtRva = 0x4C60D58, DefaultsRva = 0x4C3C660, LoanManagerRva = 0x5670D68, StartLoanRva = 0xBF8740;
+    const long PlayerVtRva = 0x4CD6848; // db::ACTUAL_PLAYER
+    static readonly byte[] StartLoanStart = { 0x41, 0x57, 0x41, 0x56, 0x41, 0x55, 0x41, 0x54, 0x56, 0x57, 0x55, 0x53, 0x48, 0x81, 0xEC, 0x88, 0x01, 0x00, 0x00 };
+    const int Size = 0x70;
+    const int PersonAt = 0x18, LoanTeamAt = 0x20, StartsAt = 0x30, EndsAt = 0x34, OtherDateAt = 0x38;
+    const int MonthlyFeeAt = 0x5C, FutureFeeAt = 0x60, WageShareAt = 0x6C;
+    const int TeamAt = -0x158;
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    delegate void StartLoan(IntPtr manager, IntPtr offer, byte flag);
+
+    public class Request
+    {
+        public int player { get; set; }
+        public int club { get; set; }
+        public string ends { get; set; }
+        public int wageShare { get; set; } = 100; // % of his wage the loan club pays
+        public int monthlyFee { get; set; }
+        public int futureFee { get; set; } = -1;  // agreed price to buy him, -1 for none
+    }
+
+    // An FM date with no flags: day of the year, then the year.
+    static byte[] Date(DateTime d) => new[] { (byte)(d.DayOfYear & 0xFF), (byte)(d.DayOfYear >> 8), (byte)(d.Year & 0xFF), (byte)(d.Year >> 8) };
+
+    // The class name MSVC records for the vtable at this address (".?AVNAME@db@@").
+    static string ClassOf(long mod, long vt)
+    {
+        long col = Mem.ReadPtr(vt - 8);
+        var b = col == 0 ? null : Mem.Read(col + 12, 4);
+        if (b == null) return null;
+        var name = Mem.Read(mod + BitConverter.ToUInt32(b, 0) + 16, 40);
+        return name == null ? null : Encoding.ASCII.GetString(name.TakeWhile(c => c != 0).ToArray());
+    }
+
+    static void CheckBuild(long mod)
+    {
+        bool ok = ClassOf(mod, mod + StartingLoanVtRva) == ".?AVSTARTING_LOAN@db@@"
+            && ClassOf(mod, mod + PlayerVtRva) == ".?AVACTUAL_PLAYER@db@@"
+            && Mem.Read(mod + StartLoanRva, StartLoanStart.Length) is { } code && code.SequenceEqual(StartLoanStart);
+        if (!ok) throw new EditorError("This version of FM isn't one the editor knows how to make loans in yet, so nothing was changed.", 409);
+    }
+
+    public static object Start(Request req)
+    {
+        long mod = Mem.ModuleBase("game_plugin.dll");
+        CheckBuild(mod);
+        long p = Players.Find(req.player);
+        if (Mem.ReadPtr(p) != mod + PlayerVtRva) throw new EditorError("Only players can be loaned.", 409);
+        if (Loans.Find(p) != 0) throw new EditorError("He's already on loan. End that loan first.", 409);
+        long current = Mem.ReadPtr(p + TeamAt);
+        if (!Players.IsTeam(current)) throw new EditorError("He has no club to be loaned from.", 409);
+        long club = Clubs.Find(req.club), team = Clubs.SeniorTeam(club);
+        if (team == 0 || Mem.Read(team + 0x2F, 1)?[0] != 0) throw new EditorError("Couldn't find that club's first team.", 409);
+        if (current == team || Mem.ReadPtr(current + 0x30) == club) throw new EditorError("He already plays for that club.", 409);
+        var today = Transfers.Today() ?? throw new EditorError("Couldn't read the game date.", 500);
+        if (!DateTime.TryParseExact(req.ends, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var ends) || ends <= today)
+            throw new EditorError("The loan must end after today.", 400);
+        if (ends > today.AddYears(5)) throw new EditorError("A loan can last at most five years.", 400);
+        if (req.wageShare < 0 || req.wageShare > 100) throw new EditorError("The wage share must be between 0% and 100%.", 400);
+        if (req.monthlyFee < 0 || req.monthlyFee > 2_000_000_000) throw new EditorError("The monthly fee must be between 0 and 2,000,000,000.", 400);
+        if (req.futureFee < -1 || req.futureFee > 2_000_000_000) throw new EditorError("The future fee must be between 0 and 2,000,000,000, or none.", 400);
+        long manager = Mem.ReadPtr(mod + LoanManagerRva);
+        if (manager == 0) throw new EditorError("FM isn't ready to make loans yet.", 503);
+
+        // The form, set up as FM's loader sets it up (0x298EDA0), then our values.
+        var f = new byte[Size];
+        BitConverter.GetBytes(mod + StartingLoanVtRva).CopyTo(f, 0);
+        BitConverter.GetBytes(-1L).CopyTo(f, 0x08);
+        foreach (var at in new[] { StartsAt, EndsAt, OtherDateAt }) BitConverter.GetBytes(0x076C0001).CopyTo(f, at);
+        BitConverter.GetBytes(-1L).CopyTo(f, 0x3C);
+        BitConverter.GetBytes(-1L).CopyTo(f, 0x41);
+        (Mem.Read(mod + DefaultsRva, 16) ?? throw new EditorError("Couldn't read FM's loan defaults.", 500)).CopyTo(f, 0x58);
+        BitConverter.GetBytes(unchecked((long)0xFF00000000000000)).CopyTo(f, 0x68);
+        BitConverter.GetBytes(p).CopyTo(f, PersonAt);
+        BitConverter.GetBytes(team).CopyTo(f, LoanTeamAt);
+        Date(today).CopyTo(f, StartsAt);
+        Date(ends).CopyTo(f, EndsAt);
+        BitConverter.GetBytes(req.monthlyFee).CopyTo(f, MonthlyFeeAt);
+        BitConverter.GetBytes(req.futureFee).CopyTo(f, FutureFeeAt);
+        BitConverter.GetBytes((short)req.wageShare).CopyTo(f, WageShareAt);
+
+        Backup.EnsureBackedUp();
+        var call = Marshal.GetDelegateForFunctionPointer<StartLoan>(new IntPtr(mod + StartLoanRva));
+        IntPtr mem = Marshal.AllocHGlobal(0x100);
+        try
+        {
+            Marshal.Copy(new byte[0x100], 0, mem, 0x100);
+            Marshal.Copy(f, 0, mem, Size);
+            Plugin.Logger.LogInfo($"Starting a loan: player 0x{p:X} to team 0x{team:X} until {req.ends}");
+            MainThread.Run(() => { call(new IntPtr(manager), mem, 1); return true; }, 15000);
+        }
+        finally { Marshal.FreeHGlobal(mem); }
+        Players.Refresh(req.player);
+        string name = Players.Summary(p)?.name ?? "The player", to = Players.TeamClub(team) ?? "the new club";
+        if (Loans.Find(p) == 0) throw new EditorError($"FM didn't start the loan. {name} is still at his club.", 500);
+        Plugin.Logger.LogInfo($"Loaned {name} to {to}");
+        return new { ok = true, message = $"Loaned {name} to {to} until {ends:d MMM yyyy}", canUndo = false };
+    }
+}

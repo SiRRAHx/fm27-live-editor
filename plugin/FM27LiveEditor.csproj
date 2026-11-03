@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>FM27LiveEditor</AssemblyName>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <FM27Dir Condition="'$(FM27Dir)' == ''">E:\Games\Football Manager 27\Content</FM27Dir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(FM27Dir)\BepInEx\core\BepInEx.Core.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\core\BepInEx.Unity.IL2CPP.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\core\Il2CppInterop.Runtime.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\core\0Harmony.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\Il2Cppmscorlib.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\SI.Interop.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\SI.Bindable.Reference.Core.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\FMGame.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\FM.GamePlugin.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\SI.Marshalling.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\SI.Bindable.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\SI.Core.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\UnityEngine.UIElementsModule.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\UnityEngine.TextCoreTextEngineModule.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\UnityEngine.ImageConversionModule.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\Il2CppSystem.Runtime.dll" Private="false" Condition="Exists('$(FM27Dir)\BepInEx\interop\Il2CppSystem.Runtime.dll')" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="logo64.png" LogicalName="FM27LiveEditor.logo64.png" />
+    <EmbeddedResource Include="pencil64.png" LogicalName="FM27LiveEditor.pencil64.png" />
+    <EmbeddedResource Include="menubg.png" LogicalName="FM27LiveEditor.menubg.png" />
+  </ItemGroup>
+</Project>

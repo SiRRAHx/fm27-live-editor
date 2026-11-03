@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: fmimg:">
+  <title>FM27 Live Editor</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <div class="backdrop bg-carbon" aria-hidden="true"></div>
+  <div class="titlebar"></div>
+
+  <aside class="sidebar">
+    <div class="brand">
+      <img class="logo" src="../build/logo.svg" alt="">
+      <div>
+        <div class="brand-name">FM Live Editor</div>
+        <div class="brand-sub">for Football Manager 27</div>
+      </div>
+    </div>
+    <nav>
+      <button class="nav active" data-tab="players">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+        <span>Players</span>
+      </button>
+      <button class="nav" data-tab="clubs">
+        <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/></svg>
+        <span>Clubs</span>
+      </button>
+      <button class="nav" data-tab="transfers">
+        <svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>
+        <span>Transfers</span>
+      </button>
+      <button class="nav" data-tab="settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="help-title">Your save is safe</div>
+      <div class="help-text">Edits only change the game while it runs. They're kept only if you <em>save</em> in FM, and the editor backs up your save before the first edit.</div>
+    </div>
+  </aside>
+
+  <div class="content">
+    <div id="demo-banner" class="banner hidden">
+      <span>Demo mode: these are made-up players, not your game.</span>
+    </div>
+
+    <main>
+      <!-- Players -->
+      <section id="tab-players" class="panel wide">
+        <div class="status-strip">
+          <span id="status-game" class="status-item idle">Looking for FM27…</span>
+          <span id="status-save" class="status-item idle hidden"></span>
+          <span class="spacer"></span>
+          <span id="status-backup" class="status-note"></span>
+        </div>
+
+        <div id="offline" class="empty hidden">
+          <div class="empty-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg></div>
+          <h2>Start FM27 and load your career</h2>
+          <p>The editor connects by itself once the game is running. You can also open it from the <em>Live Editor</em> button inside FM.</p>
+        </div>
+
+        <div id="players-ui" class="split hidden">
+          <div class="picker">
+            <div class="search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+              <input id="search" type="search" placeholder="Search players or clubs">
+            </div>
+            <div id="results" class="results"></div>
+          </div>
+
+          <div class="editor">
+            <div id="editor-empty" class="empty">
+              <h2>Pick a player</h2>
+              <p>Search for anyone in your game, then change their attributes and press <em>Apply to game</em>.</p>
+            </div>
+            <div id="editor" class="hidden">
+              <div class="player-head">
+                <div class="face-wrap"><img class="face" id="p-face" alt=""><img class="badge" id="p-badge" alt=""><div class="art pos" id="p-pos"></div></div>
+                <div class="row-main">
+                  <div class="row-title" id="p-name"></div>
+                  <div class="row-desc" id="p-sub"></div>
+                </div>
+                <div class="ability">
+                  <label>Current ability <input id="p-ca" type="number" min="1" max="200"></label>
+                  <label>Potential ability <input id="p-pa" type="number" min="1" max="200"></label>
+                </div>
+              </div>
+              <div class="type-tabs editor-tabs">
+                <button class="type-tab active" data-pane="attributes">Attributes</button>
+                <button class="type-tab" data-pane="positions">Positions</button>
+                <button class="type-tab" data-pane="status">Status</button>
+                <button class="type-tab" data-pane="contract">Contract</button>
+              </div>
+              <div id="pane-attributes" class="pane attr-groups"></div>
+              <div id="pane-positions" class="pane hidden">
+                <p class="sub">How well the player knows each position. 20 is natural, 15–19 accomplished, 1 never played there.</p>
+                <div id="positions" class="attr-grid positions"></div>
+              </div>
+              <div id="pane-status" class="pane hidden">
+                <div class="contract-cards">
+                  <div class="attr-card contract-card">
+                    <h3>Morale and fitness</h3>
+                    <label>Morale (1 very poor, 20 superb) <input id="s-morale" type="number" min="1" max="20"></label>
+                    <label>Condition (%) <input id="s-condition" type="number" min="0" max="100" step="1"></label>
+                    <label>Match sharpness (%) <input id="s-sharpness" type="number" min="35" max="100" step="1"></label>
+                  </div>
+                  <div class="attr-card contract-card">
+                    <h3>Reputation</h3>
+                    <label>Home reputation (0–10,000) <input id="s-homeReputation" type="number" min="0" max="10000" step="50"></label>
+                    <label>Current reputation (0–10,000) <input id="s-currentReputation" type="number" min="0" max="10000" step="50"></label>
+                    <label>World reputation (0–10,000) <input id="s-worldReputation" type="number" min="0" max="10000" step="50"></label>
+                  </div>
+                  <div class="attr-card contract-card">
+                    <h3>Injuries and bans</h3>
+                    <div id="h-list"></div>
+                    <div class="card-actions">
+                      <button class="btn" id="h-heal">Heal injuries</button>
+                      <button class="btn" id="h-lift">Lift bans</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="pane-contract" class="pane hidden">
+                <div id="no-contract" class="empty small hidden">
+                  <h2>No contract</h2>
+                  <p>This player isn't under contract with a club, so there's nothing to change here.</p>
+                </div>
+                <div id="contract-form" class="contract-cards">
+                  <div class="attr-card contract-card">
+                    <h3 id="c-title">Contract</h3>
+                    <label>Wage per week (£) <input id="c-wage" type="number" min="0" max="10000000" step="500"></label>
+                    <label>Contract ends <input id="c-ends" type="date" min="2000-01-01" max="2100-12-31"></label>
+                    <label>Squad status <select id="c-status"></select></label>
+                    <label>Squad number <input id="c-number" type="number" min="1" max="99" placeholder="None"></label>
+                    <p class="card-note" id="c-joined"></p>
+                  </div>
+                  <div class="attr-card contract-card">
+                    <h3>Clauses and bonuses</h3>
+                    <div id="c-clauses" class="contract-card"></div>
+                    <p class="card-note">You can change the clauses the contract already has. Adding or removing clauses isn't supported yet.</p>
+                  </div>
+                  <div id="loan-form" class="attr-card contract-card hidden">
+                    <h3 id="l-title">Loan</h3>
+                    <label>Wage per week (£) <input id="l-wage" type="number" min="0" max="10000000" step="500"></label>
+                    <label>Loan ends <input id="l-ends" type="date" min="2000-01-01" max="2100-12-31"></label>
+                    <label>Monthly fee (£) <input id="l-monthlyFee" type="number" min="0" max="2000000000" step="1000" placeholder="None"></label>
+                    <label>Monthly fee if unused (£) <input id="l-unusedFee" type="number" min="0" max="2000000000" step="1000" placeholder="None"></label>
+                    <label>Future fee to buy (£) <input id="l-futureFee" type="number" min="0" max="2000000000" step="100000" placeholder="None"></label>
+                    <p class="card-note" id="l-note"></p>
+                    <div class="card-actions">
+                      <button class="btn" id="l-end">End loan</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Clubs -->
+      <section id="tab-clubs" class="panel wide hidden">
+        <div id="clubs-offline" class="empty">
+          <h2>Start FM27 and load your career</h2>
+          <p>Clubs appear once the editor has found the players in your game.</p>
+        </div>
+        <div id="clubs-ui" class="split hidden">
+          <div class="picker">
+            <div class="search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+              <input id="club-search" type="search" placeholder="Search clubs">
+            </div>
+            <div id="club-results" class="results"></div>
+          </div>
+          <div class="editor">
+            <div id="club-empty" class="empty">
+              <h2>Pick a club</h2>
+              <p>Search for any club in your game to change its reputation, facilities, bank balance and budgets.</p>
+            </div>
+            <div id="club-editor" class="hidden">
+              <div class="player-head">
+                <img class="club-logo" id="club-logo" alt="">
+                <div class="row-main">
+                  <div class="row-title" id="club-name"></div>
+                  <div class="row-desc" id="club-sub"></div>
+                </div>
+              </div>
+              <div id="no-finances" class="empty small hidden">
+                <h2>No finances found</h2>
+                <p>The editor couldn't find this club's finances, so they can't be changed.</p>
+              </div>
+              <div class="contract-cards">
+                <div id="finance-form" class="attr-card contract-card">
+                  <h3>Finances</h3>
+                  <label>Bank balance (£) <input id="f-balance" type="number" step="100000"></label>
+                  <label>Transfer budget (£) <input id="f-transferBudget" type="number" min="0" step="100000"></label>
+                  <label>Wage budget per week (£) <input id="f-wageBudget" type="number" min="0" step="1000"></label>
+                  <p class="card-note" id="f-wages"></p>
+                </div>
+                <div class="attr-card contract-card squad-card">
+                  <h3>Whole squad</h3>
+                  <p class="card-note">Changes every player under contract with the club, youth teams included.</p>
+                  <div class="card-actions">
+                    <button class="btn" data-squad="morale">Superb morale</button>
+                    <button class="btn" data-squad="fitness">Full fitness and sharpness</button>
+                  </div>
+                </div>
+                <div id="club-form" class="attr-card contract-card">
+                  <h3>Reputation and facilities</h3>
+                  <label>Professional status <select id="r-status"><option value="1">Professional</option><option value="2">Semi-Professional</option><option value="3">Amateur</option></select></label>
+                  <label id="r-row">Reputation (0–10,000) <input id="r-reputation" type="number" min="0" max="10000" step="100"></label>
+                  <label>Training facilities (1–20) <input id="fac-training" type="number" min="1" max="20"></label>
+                  <label>Youth facilities (1–20) <input id="fac-youthFacilities" type="number" min="1" max="20"></label>
+                  <label>Junior coaching (1–20) <input id="fac-youthCoaching" type="number" min="1" max="20"></label>
+                  <label>Youth recruitment (1–20) <input id="fac-youthRecruitment" type="number" min="1" max="20"></label>
+                  <label>Corporate facilities (1–20) <input id="fac-corporate" type="number" min="1" max="20"></label>
+                  <p class="card-note" id="club-founded"></p>
+                </div>
+              </div>
+              <div class="card-actions club-actions">
+                <button id="club-undo" class="btn">Undo changes</button>
+                <button id="club-apply" class="btn primary">Apply to game</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Transfers -->
+      <section id="tab-transfers" class="panel hidden">
+        <div class="page-head"><div><div class="eyebrow">Transfers</div><h1>Move players between clubs</h1><p class="sub">Move a player to another club, swap two players, or release a player. The change is instant and your save is backed up first.</p></div></div>
+        <div id="transfers-offline" class="empty">
+          <h2>Start FM27 and load your career</h2>
+          <p>Transfers work once the editor has found the players in your game.</p>
+        </div>
+        <div id="transfers-ui" class="transfer-page hidden">
+          <div class="attr-card transfer-card">
+            <h3>Your club</h3>
+            <p class="card-note">The editor warns you before a player leaves a club you manage, because FM takes him out of your tactic, bench and squad registration.</p>
+            <div id="my-clubs" class="chips"></div>
+            <div class="picker-box" id="my-club-pick"></div>
+          </div>
+          <div class="type-tabs" id="move-tabs">
+            <button class="type-tab active" data-mode="move">Move</button>
+            <button class="type-tab" data-mode="loan">Loan</button>
+            <button class="type-tab" data-mode="swap">Swap</button>
+            <button class="type-tab" data-mode="release">Release</button>
+          </div>
+          <div class="attr-card transfer-card">
+            <div class="field">Player <div class="picker-box" id="t-player"></div></div>
+            <div class="field" data-modes="move loan"><span id="t-club-label">New club</span> <div class="picker-box" id="t-club"></div></div>
+            <div class="field hidden" data-modes="swap">Swap with <div class="picker-box" id="t-other"></div></div>
+            <div class="terms" data-modes="move">
+              <label>Transfer fee (£) <input id="t-fee" type="number" min="0" step="100000" placeholder="Free"></label>
+              <label>Wage per week (£) <input id="t-wage" type="number" min="0" step="500" placeholder="Keep current"></label>
+              <label>Contract ends <input id="t-ends" type="date" min="2000-01-01" max="2100-12-31"></label>
+            </div>
+            <div class="terms hidden" data-modes="loan">
+              <label>Loan ends <input id="loan-ends" type="date" min="2000-01-01" max="2100-12-31"></label>
+              <label>Wage share (%) <input id="loan-share" type="number" min="0" max="100" step="5" value="100" title="How much of his wage the loan club pays"></label>
+              <label>Monthly fee (£) <input id="loan-fee" type="number" min="0" step="5000" placeholder="None"></label>
+              <label>Future fee (£) <input id="loan-buy" type="number" min="0" step="100000" placeholder="None" title="The agreed price if the loan club wants to buy him"></label>
+            </div>
+            <p class="card-note" id="t-hint"></p>
+            <div class="card-actions"><button id="t-go" class="btn primary" disabled>Move player</button></div>
+          </div>
+          <div id="last-move" class="attr-card transfer-card hidden">
+            <h3>Last change</h3>
+            <p id="last-move-text"></p>
+            <p class="card-note">Undo works until the game moves on (for example when you continue a day).</p>
+            <div class="card-actions"><button id="t-undo" class="btn">Undo</button></div>
+          </div>
+          <p class="card-note credit">Transfers build on findings from FMLibreEditor and fm-editor, both open source (GPL-3.0).</p>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section id="tab-settings" class="panel hidden">
+        <div class="page-head"><div><div class="eyebrow">Settings</div><h1>Preferences</h1></div></div>
+        <h2 class="section-title">Appearance</h2>
+        <div class="group">
+          <div class="setting column">
+            <div class="setting-text">
+              <div class="setting-name">Colour theme</div>
+              <div class="setting-desc">Buttons, highlights and the background change to match.</div>
+            </div>
+            <div class="theme-picker" id="theme-picker">
+              <button class="theme-option" data-theme="emerald"><span class="dot dot-emerald"></span>Emerald</button>
+              <button class="theme-option" data-theme="blue"><span class="dot dot-blue"></span>Blue</button>
+              <button class="theme-option" data-theme="purple"><span class="dot dot-purple"></span>Purple</button>
+              <button class="theme-option" data-theme="red"><span class="dot dot-red"></span>Red</button>
+              <button class="theme-option" data-theme="orange"><span class="dot dot-orange"></span>Orange</button>
+              <button class="theme-option" data-theme="teal"><span class="dot dot-teal"></span>Teal</button>
+            </div>
+          </div>
+        </div>
+        <div class="group">
+          <div class="setting column">
+            <div class="setting-text">
+              <div class="setting-name">Background</div>
+              <div class="setting-desc">Choose the look behind the app.</div>
+            </div>
+            <div class="bg-picker" id="bg-picker">
+              <button class="bg-option" data-bg="carbon"><span class="swatch bg-carbon"></span>Carbon</button>
+              <button class="bg-option" data-bg="stadium"><span class="swatch bg-stadium"></span>Stadium</button>
+              <button class="bg-option" data-bg="grain"><span class="swatch bg-grain"></span>Grain</button>
+              <button class="bg-option" data-bg="mesh"><span class="swatch bg-mesh"></span>Jersey mesh</button>
+              <button class="bg-option" data-bg="hex"><span class="swatch bg-hex"></span>Hex</button>
+            </div>
+          </div>
+        </div>
+        <h2 class="section-title">About</h2>
+        <div class="group">
+          <div class="setting">
+            <div class="setting-text">
+              <div class="setting-name">App version <span id="app-version"></span></div>
+              <div class="setting-desc">A free fan-made tool, not made by or affiliated with Sports Interactive or SEGA.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="apply-bar" class="apply-bar hidden">
+      <span id="apply-count"></span>
+      <span class="spacer"></span>
+      <button id="undo" class="btn">Undo changes</button>
+      <button id="apply" class="btn primary">Apply to game</button>
+    </div>
+  </div>
+
+  <dialog id="ask-dialog">
+    <h2 id="ask-title"></h2>
+    <p id="ask-text" class="ask-text"></p>
+    <div class="dialog-actions">
+      <button class="btn" id="ask-no">Cancel</button>
+      <button class="btn primary" id="ask-yes">OK</button>
+    </div>
+  </dialog>
+  <div id="toasts"></div>
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Build output and dependencies
+node_modules/
+plugin/bin/
+plugin/obj/
+engine/bin/
+engine/obj/
+app/dist/
+*.lnk
+
+# User data: save backups never go in the repo
+Save backups/
+save-backup-*/
+
+# Research data dumps (large, game-specific); notes and scripts stay
+research/snapshot-*/
+research/*.json
+research/*-refs.txt
+research/*-ptrs.txt
+research/research-registry.txt
+research/__pycache__/
+tools/**/bin/
+tools/**/obj/

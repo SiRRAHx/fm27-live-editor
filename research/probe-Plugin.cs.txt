@@ -1,0 +1,219 @@
+﻿// Read-only probe. Every few seconds, on the game's main thread, it walks the visible UI
+// and records (a) the text on screen and (b) the data objects bound to it, with their
+// values. It hooks nothing and changes nothing.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using BepInEx;
+using BepInEx.Logging;
+using BepInEx.Unity.IL2CPP;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+namespace FM27LiveEditor;
+
+[BepInPlugin("com.local.fm27liveeditor", "FM27 Live Editor (probe)", "0.0.2")]
+public class Plugin : BasePlugin
+{
+    internal static ManualLogSource Logger;
+    internal static string DumpPath;
+
+    public override void Load()
+    {
+        Logger = Log;
+        DumpPath = Path.Combine(Paths.BepInExRootPath, "fm27-live-editor-probe.txt");
+        AddComponent<Probe>();
+        // Watches (never changes) the calls the UI makes when it sends a value or
+        // event to the game. These run on user actions, not every frame.
+        var h = new HarmonyLib.Harmony("com.local.fm27liveeditor.probe");
+        var gp = typeof(FM.GamePlugin.GamePlugin);
+        h.Patch(gp.GetMethod(nameof(FM.GamePlugin.GamePlugin.UpdateChannelData)), postfix: new HarmonyLib.HarmonyMethod(typeof(Watch), nameof(Watch.Update)));
+        h.Patch(gp.GetMethod(nameof(FM.GamePlugin.GamePlugin.SendEvent)), postfix: new HarmonyLib.HarmonyMethod(typeof(Watch), nameof(Watch.Event)));
+        h.Patch(gp.GetMethod(nameof(FM.GamePlugin.GamePlugin.OpenChannels)), postfix: new HarmonyLib.HarmonyMethod(typeof(Watch), nameof(Watch.Open)));
+        Log.LogInfo("Probe ready (reads the screen every 5 s, logs UI-to-game calls, changes nothing)");
+    }
+}
+
+public static class Watch
+{
+    static readonly List<string> lines = new();
+    static int opens;
+
+    static void Add(string s) { lock (lines) if (lines.Count < 20000) lines.Add($"{DateTime.Now:HH:mm:ss.fff} {s}"); }
+
+    internal static void Flush()
+    {
+        string[] copy;
+        lock (lines) { if (lines.Count == 0) return; copy = lines.ToArray(); lines.Clear(); }
+        File.AppendAllLines(Path.Combine(Paths.BepInExRootPath, "fm27-live-editor-calls.txt"), copy);
+    }
+
+    static string Ref(SI.Interop.InteropReference r)
+    {
+        if (r == null) return "null";
+        var sb = new StringBuilder($"{r.ID.ID}{{");
+        var ids = r.m_id;
+        if (ids != null) foreach (var p in ids) sb.Append($"{p.ID}={p.Value},");
+        return sb.Append('}').ToString();
+    }
+
+    static string Val(SI.Core.TypedValue v)
+    {
+        if (v == null) return "null";
+        try { return $"{v.DataType?.FullName}:{v.AsString()}"; } catch { return "?"; }
+    }
+
+    public static void Update(FM.GamePlugin.ChannelAction action, SI.Core.TypedValue value)
+    {
+        try { Add($"UPDATE key={action.key} mode={action.mode} extra={action.additionalKey} value={Val(value)}"); } catch { }
+    }
+
+    public static void Event(uint eventID, SI.Interop.InteropReference objectTo, SI.Core.TypedValue data)
+    {
+        try { Add($"EVENT {eventID} to={Ref(objectTo)} data={Val(data)}"); } catch { }
+    }
+
+    public static void Open(SI.Interop.InteropReference reference, Il2CppSystem.Collections.Generic.List<FM.GamePlugin.ChannelData> channels)
+    {
+        try
+        {
+            if (++opens > 5000) return;
+            var sb = new StringBuilder($"OPEN {Ref(reference)} [");
+            int n = 0;
+            foreach (var c in channels) { if (n++ < 80) sb.Append($"{c.property}:{c.key} "); }
+            Add(sb.Append($"] n={n}").ToString());
+        }
+        catch { }
+    }
+}
+
+public class Probe : MonoBehaviour
+{
+    float next = 10f, nextLog;
+    string lastDump = "";
+    int failures;
+
+    bool registryDumped;
+
+    void Update()
+    {
+        if (Time.realtimeSinceStartup < next || failures > 5) return;
+        next = Time.realtimeSinceStartup + 5f;
+        try { Watch.Flush(); } catch { }
+        try { if (!registryDumped) registryDumped = DumpRegistry(); }
+        catch (Exception e) { registryDumped = true; Plugin.Logger.LogWarning("probe registry: " + e); }
+        try { Scan(); }
+        catch (Exception e) { failures++; Plugin.Logger.LogWarning("probe: " + e); }
+    }
+
+    // Writes every registered property and reference name with its ID, once the
+    // game has registered them.
+    static bool DumpRegistry()
+    {
+        var props = new SI.Bindable.Reference.Core.PropertyID(0).GetIdentifierSet().m_idToInfo;
+        var refs = new SI.Bindable.Reference.Core.ReferenceID(0).GetIdentifierSet().m_idToInfo;
+        if (props == null || props.Count < 100) return false;
+        var sb = new StringBuilder();
+        sb.AppendLine($"# references ({refs?.Count ?? 0})");
+        if (refs != null) foreach (var kv in refs) sb.AppendLine($"R {kv.Key}\t{Safe(() => kv.Value.Name)}\t{Safe(() => kv.Value._Flag_k__BackingField.ToString())}");
+        sb.AppendLine($"# properties ({props.Count})");
+        foreach (var kv in props) sb.AppendLine($"P {kv.Key}\t{Safe(() => kv.Value.Name)}\t{Safe(() => kv.Value._Flag_k__BackingField.ToString())}");
+        File.WriteAllText(Path.Combine(Paths.BepInExRootPath, "fm27-live-editor-registry.txt"), sb.ToString());
+        Plugin.Logger.LogInfo($"probe: wrote {props.Count} property and {refs?.Count ?? 0} reference names");
+        return true;
+    }
+
+    void Scan()
+    {
+        var texts = new List<string>();
+        var sources = new Dictionary<string, string>();
+        var docs = Resources.FindObjectsOfTypeAll<UIDocument>();
+        var roots = new List<VisualElement>();
+        var names = new List<string>();
+        // FM's own screens: FMInitialiser holds the PanelManager, which lists every open panel.
+        var init = UnityEngine.Object.FindObjectOfType<FM.Game.FMInitialiser>();
+        var pm = init?.m_panelManager;
+        if (pm != null)
+        {
+            var open = new Il2CppSystem.Collections.Generic.List<SI.Bindable.Panel>();
+            pm.GetAllOpenPanels(open);
+            foreach (var p in open)
+            {
+                if (p == null) continue;
+                names.Add(Safe(() => p.InstanceName));
+                if (!roots.Any(r => r.Pointer == p.Pointer)) roots.Add(p);
+            }
+        }
+        foreach (var doc in docs)
+        {
+            var root = doc?.rootVisualElement;
+            if (root == null) continue;
+            // Several documents can share one panel; walk each panel's tree once.
+            var top = root.panel?.visualTree ?? root;
+            if (!roots.Any(r => r.Pointer == top.Pointer)) roots.Add(top);
+        }
+        if (Time.realtimeSinceStartup > nextLog)
+        {
+            nextLog = Time.realtimeSinceStartup + 30f;
+            Plugin.Logger.LogInfo($"probe: {docs.Length} UI documents, panel manager {(pm != null ? "found" : "not found")}, {names.Count} open panels: {string.Join(", ", names.Take(12))}");
+        }
+        int visited = 0;
+        foreach (var root in roots)
+        {
+            var stack = new Stack<VisualElement>();
+            stack.Push(root);
+            while (stack.Count > 0 && visited < 60000)
+            {
+                var el = stack.Pop();
+                visited++;
+                if (el.resolvedStyle.display == DisplayStyle.None) continue;
+                var label = el.TryCast<TextElement>();
+                if (label != null && !string.IsNullOrWhiteSpace(label.text) && texts.Count < 600) texts.Add(label.text.Trim());
+                var ds = el.dataSource;
+                if (ds != null) Describe(ds, sources);
+                for (int i = el.hierarchy.childCount - 1; i >= 0; i--) stack.Push(el.hierarchy[i]);
+            }
+        }
+        var sb = new StringBuilder();
+        sb.AppendLine($"# {DateTime.Now:HH:mm:ss}  documents={docs.Length} panels={names.Count} elements={visited} texts={texts.Count} sources={sources.Count}");
+        sb.AppendLine("## Open panels: " + string.Join(", ", names));
+        sb.AppendLine("## Data objects");
+        foreach (var kv in sources.OrderBy(k => k.Key)) sb.AppendLine(kv.Value);
+        sb.AppendLine("## Text on screen");
+        foreach (var t in texts) sb.AppendLine("  " + t.Replace("\n", " | "));
+        var dump = sb.ToString();
+        if (dump.Substring(dump.IndexOf('\n')) == lastDump) return;
+        lastDump = dump.Substring(dump.IndexOf('\n'));
+        File.WriteAllText(Plugin.DumpPath, dump);
+    }
+
+    static void Describe(Il2CppSystem.Object ds, Dictionary<string, string> sources)
+    {
+        var type = ds.GetIl2CppType().FullName;
+        var r = ds.TryCast<SI.Interop.InteropReference>();
+        if (r == null)
+        {
+            var key = "other:" + type;
+            if (!sources.ContainsKey(key)) sources[key] = $"  [{type}] {Safe(() => ds.ToString())}";
+            return;
+        }
+        var id = r.ID.ToString();
+        var k2 = type + "#" + id;
+        if (sources.ContainsKey(k2)) return;
+        var sb = new StringBuilder($"  [{type}] id={id}");
+        var props = new Il2CppSystem.Collections.Generic.List<SI.Bindable.Reference.Core.PropertyID>();
+        r.GetProperties(props);
+        int n = 0;
+        foreach (var p in props)
+        {
+            if (n++ > 300) break;
+            int v;
+            if (r.TryGetValue(p.ID, out v)) sb.Append($"\n      {Safe(() => p.ToString())} ({p.ID}) = {v}");
+        }
+        sources[k2] = sb.ToString();
+    }
+
+    static string Safe(Func<string> f) { try { return f(); } catch { return "?"; } }
+}
