@@ -14,7 +14,6 @@ namespace FM27LiveEditor;
 
 public static class Loans
 {
-    const long LoanVtableRva = 0x4D78AF8;
     internal const int HolderAt = 0xB0;
     const int TeamAt = 0x10, WageAt = 0x20, WageCopyAt = 0xD4, StartsAt = 0x44, EndsAt = 0x48;
     const int FutureFeeAt = 0xC0, MonthlyFeeAt = 0xCC, UnusedFeeAt = 0xD0, Size = 0xD8;
@@ -24,8 +23,7 @@ public static class Loans
     {
         long holder = Mem.ReadPtr(p + HolderAt);
         long loan = holder == 0 ? 0 : Mem.ReadPtr(holder);
-        long b = Mem.ModuleBase("game_plugin.dll");
-        return loan != 0 && Mem.ReadPtr(loan) == b + LoanVtableRva && Mem.ReadPtr(loan + 8) == p ? loan : 0;
+        return loan != 0 && Addresses.Loan != 0 && Mem.ReadPtr(loan) == Addresses.Loan && Mem.ReadPtr(loan + 8) == p ? loan : 0;
     }
 
     static int? Fee(byte[] b, int at) => BitConverter.ToInt32(b, at) is var v && v >= 0 ? v : null;

@@ -29,7 +29,6 @@ public static class Transfers
     const int SignedAt = 0x44, ExpiresAt = 0x48, JoinedAt = 0x4C, ListingAt = 0x57, NumberAt = 0x5D;
     const int TeamClubAt = 0x30, TeamPlayersAt = 0x38, CaptainAt = 0x88, ViceCaptainAt = 0x90;
     const int ClubTeamsAt = 0x18, ClubWomenAt = 0xB9;
-    const long CurrentDateRva = 0x56257C8;
     const byte PlayerJob = 1, NoSquadNumber = 255, Listed = 0b11;
     const int LongestList = 512;
     static readonly int[] BlockSizes = { 144, 160, 192, 224, 256, 288, 320, 384, 448, 512 };
@@ -95,7 +94,7 @@ public static class Transfers
     // The in-game date, or null if it doesn't look like one.
     internal static DateTime? Today()
     {
-        var b = Mem.Read(Mem.ModuleBase("game_plugin.dll") + CurrentDateRva, 4);
+        var b = Addresses.Today == 0 ? null : Mem.Read(Addresses.Today, 4);
         if (b == null) return null;
         int day = BitConverter.ToUInt16(b, 0) & 0x1FF, year = BitConverter.ToInt16(b, 2);
         if (year < 2000 || year > 2200 || day < 1 || day > 366) return null;

@@ -4,7 +4,7 @@ namespace FM27LiveEditor;
 
 public static class Host
 {
-    public const string Version = "0.3.1";
+    public const string Version = "0.3.2-dev.1";
     static int checkedPid;
     static bool? editing;
     public static string Reason = "Start FM27 and load a save.";
@@ -21,9 +21,9 @@ public static class Host
             }
             if (Mem.Pid != checkedPid) { editing = null; checkedPid = Mem.Pid; Backup.Done = null; }
             if (editing != null) return editing.Value;
-            if (Mem.ModuleBase("game_plugin.dll") == 0 || !Players.LayoutOk()) { Reason = "FM27 is still starting."; return false; }
+            if (Mem.ModuleBase("game_plugin.dll") == 0) { Reason = "FM27 is still starting."; return false; }
             editing = Layout.Matches();
-            Reason = editing.Value ? null : "This version of FM27 isn't supported yet, so editing is switched off. Check for an editor update.";
+            Reason = editing.Value ? null : "This version of FM27 isn't supported yet, so editing is switched off. Check for an editor update, or report it with the editor's log.";
             Log.Info(editing.Value ? "Game module found, editing available" : Reason);
             return editing.Value;
         }

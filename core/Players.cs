@@ -30,11 +30,8 @@ public record PlayerSummary(int id, string name, int born, string position, stri
 
 public static class Players
 {
-    const long PersonVtableRva = 0x4CD6848, AttrVtableRva = 0x4AFBF48, PlayerVtableRva = 0x4CD6318;
-    const long TeamVtableRva = 0x4C90A78, ClubVtableRva = 0x4C89B68;
     const int AttrOffset = -0x140, PlayerOffset = -0x288;
     const int TeamAt = -0x158, CaAt = -0x24, PaAt = -0x22;
-    const long ContractVtableRva = 0x4AC05F8;
     const int ContractAt = 0xA8, WageAt = 0x20, EndsAt = 0x48, JoinedAt = 0x4C, StatusAt = 0x54, StatusCopyAt = 0x56;
     const int ClausesAt = 0x68, NationAt = 0x68, SquadNumberAt = 0x5D;
 
@@ -47,7 +44,6 @@ public static class Players
         new("morale", -0x1C, 1, 1, 20), new("condition", -0x2C, 2, 0, 10000), new("sharpness", -0x30, 2, 3500, 10000),
         new("homeReputation", -0x2A, 2, 0, 10000), new("currentReputation", -0x28, 2, 0, 10000), new("worldReputation", -0x26, 2, 0, 10000),
     };
-    const long NationVtableRva = 0x4C8EFA8;
 
     // Squad status codes, matched against FM's wages screen. Only these can be set.
     public static readonly Dictionary<int, string> SquadStatuses = new()
@@ -92,13 +88,11 @@ public static class Players
     public static DateTime IndexedAt;
     public static string LastError;
 
-    public static bool LayoutOk()
+    // Takes the class tables found in this build of FM (see Addresses).
+    internal static void UseAddresses()
     {
-        long b = Mem.ModuleBase("game_plugin.dll");
-        if (b == 0) return false;
-        personVt = b + PersonVtableRva; attrVt = b + AttrVtableRva; playerVt = b + PlayerVtableRva;
-        teamVt = b + TeamVtableRva; clubVt = b + ClubVtableRva; contractVt = b + ContractVtableRva; nationVt = b + NationVtableRva;
-        return true;
+        personVt = Addresses.Person; attrVt = Addresses.Attr; playerVt = Addresses.Player;
+        teamVt = Addresses.Team; clubVt = Addresses.Club; contractVt = Addresses.Contract; nationVt = Addresses.Nation;
     }
 
     public static int Count { get { lock (gate) return list.Count; } }
@@ -542,26 +536,14 @@ public static class Players
     }
 }
 
-// The layout above was found in one build of FM27. Any game update rebuilds
-// game_plugin.dll, which changes its size, so a different size means "not
-// supported yet" rather than guessing.
+// Whether this build of FM27 (any store, any update) has everything the editor needs: all of
+// it is found in the running game module (see Addresses), and editing stays off if not.
 public static class Layout
 {
-    const int KnownImageSize = 0x175DA000;
-
     public static bool Matches()
     {
-        long b = Mem.ModuleBase("game_plugin.dll");
-        var pe = Mem.Read(b + 0x3C, 4);
-        if (pe == null) return false;
-        var size = Mem.Read(b + BitConverter.ToInt32(pe, 0) + 0x18 + 0x38, 4);
-        if (size == null) return false;
-        int image = BitConverter.ToInt32(size, 0);
-        if (image != KnownImageSize)
-        {
-            Log.Warn($"game_plugin.dll size is 0x{image:X}, expected 0x{KnownImageSize:X}");
-            return false;
-        }
+        if (!Addresses.Resolve(Mem.ModuleBase("game_plugin.dll"))) return false;
+        Players.UseAddresses();
         return true;
     }
 }

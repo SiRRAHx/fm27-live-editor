@@ -12,7 +12,6 @@ namespace FM27LiveEditor;
 
 public static class Clubs
 {
-    const long FinancesVtableRva = 0x4C9FD78;
     const int IdAt = 8, FinancesAt = 0x150;
     internal const int BalanceAt = 0xC, TransferBudgetAt = 0x7C4, WageBudgetAt = 0x808, WagesAt = 0x814;
 
@@ -62,8 +61,7 @@ public static class Clubs
     internal static long Finances(long club)
     {
         long f = Mem.ReadPtr(club + FinancesAt);
-        long b = Mem.ModuleBase("game_plugin.dll");
-        return f != 0 && b != 0 && Mem.ReadPtr(f) == b + FinancesVtableRva ? f : 0;
+        return f != 0 && Addresses.Finances != 0 && Mem.ReadPtr(f) == Addresses.Finances ? f : 0;
     }
 
     internal static int Id(long club) => BitConverter.ToInt32(Mem.Read(club + IdAt, 4) ?? new byte[4], 0);

@@ -13,8 +13,8 @@ namespace FM27LiveEditor;
 
 public static class LoanStart
 {
-    const long StartingLoanVtRva = 0x4C60D58, DefaultsRva = 0x4C3C660, LoanManagerRva = 0x5670D68, StartLoanRva = 0xBF8740;
-    const long PlayerVtRva = 0x4CD6848; // db::ACTUAL_PLAYER
+    // The form's default clause values, as FM keeps them (-1, 0, -1, -1).
+    static readonly byte[] Defaults = { 0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
     static readonly byte[] StartLoanStart = { 0x41, 0x57, 0x41, 0x56, 0x41, 0x55, 0x41, 0x54, 0x56, 0x57, 0x55, 0x53, 0x48, 0x81, 0xEC, 0x88, 0x01, 0x00, 0x00 };
     const int Size = 0x70;
     const int PersonAt = 0x18, LoanTeamAt = 0x20, StartsAt = 0x30, EndsAt = 0x34, OtherDateAt = 0x38;
@@ -46,9 +46,9 @@ public static class LoanStart
 
     static void CheckBuild(long mod)
     {
-        bool ok = ClassOf(mod, mod + StartingLoanVtRva) == ".?AVSTARTING_LOAN@db@@"
-            && ClassOf(mod, mod + PlayerVtRva) == ".?AVACTUAL_PLAYER@db@@"
-            && Mem.Read(mod + StartLoanRva, StartLoanStart.Length) is { } code && code.SequenceEqual(StartLoanStart);
+        bool ok = Addresses.Game != 0 && ClassOf(mod, Addresses.StartingLoan) == ".?AVSTARTING_LOAN@db@@"
+            && ClassOf(mod, Addresses.Person) == ".?AVACTUAL_PLAYER@db@@"
+            && Mem.Read(Addresses.StartLoan, StartLoanStart.Length) is { } code && code.SequenceEqual(StartLoanStart);
         if (!ok) throw new EditorError("This version of FM isn't one the editor knows how to make loans in yet, so nothing was changed.", 409);
     }
 
@@ -57,7 +57,7 @@ public static class LoanStart
         long mod = Mem.ModuleBase("game_plugin.dll");
         CheckBuild(mod);
         long p = Players.Find(req.player);
-        if (Mem.ReadPtr(p) != mod + PlayerVtRva) throw new EditorError("Only players can be loaned.", 409);
+        if (Mem.ReadPtr(p) != Addresses.Person) throw new EditorError("Only players can be loaned.", 409);
         if (Loans.Find(p) != 0) throw new EditorError("He's already on loan. End that loan first.", 409);
         long current = Mem.ReadPtr(p + TeamAt);
         if (!Players.IsTeam(current)) throw new EditorError("He has no club to be loaned from.", 409);
@@ -71,17 +71,17 @@ public static class LoanStart
         if (req.wageShare < 0 || req.wageShare > 100) throw new EditorError("The wage share must be between 0% and 100%.", 400);
         if (req.monthlyFee < 0 || req.monthlyFee > 2_000_000_000) throw new EditorError("The monthly fee must be between 0 and 2,000,000,000.", 400);
         if (req.futureFee < -1 || req.futureFee > 2_000_000_000) throw new EditorError("The future fee must be between 0 and 2,000,000,000, or none.", 400);
-        long manager = Mem.ReadPtr(mod + LoanManagerRva);
+        long manager = Mem.ReadPtr(Addresses.Game);
         if (manager == 0) throw new EditorError("FM isn't ready to make loans yet.", 503);
 
         // The form, set up as FM's loader sets it up (0x298EDA0), then our values.
         var f = new byte[Size];
-        BitConverter.GetBytes(mod + StartingLoanVtRva).CopyTo(f, 0);
+        BitConverter.GetBytes(Addresses.StartingLoan).CopyTo(f, 0);
         BitConverter.GetBytes(-1L).CopyTo(f, 0x08);
         foreach (var at in new[] { StartsAt, EndsAt, OtherDateAt }) BitConverter.GetBytes(0x076C0001).CopyTo(f, at);
         BitConverter.GetBytes(-1L).CopyTo(f, 0x3C);
         BitConverter.GetBytes(-1L).CopyTo(f, 0x41);
-        (Mem.Read(mod + DefaultsRva, 16) ?? throw new EditorError("Couldn't read FM's loan defaults.", 500)).CopyTo(f, 0x58);
+        Defaults.CopyTo(f, 0x58);
         BitConverter.GetBytes(unchecked((long)0xFF00000000000000)).CopyTo(f, 0x68);
         BitConverter.GetBytes(p).CopyTo(f, PersonAt);
         BitConverter.GetBytes(team).CopyTo(f, LoanTeamAt);
@@ -108,8 +108,8 @@ public static class LoanStart
             0x31, 0xC0,                                     // xor eax, eax
             0xC3,                                           // ret
         };
-        BitConverter.GetBytes(mod + LoanManagerRva).CopyTo(stub, 9);
-        BitConverter.GetBytes(mod + StartLoanRva).CopyTo(stub, 28);
+        BitConverter.GetBytes(Addresses.Game).CopyTo(stub, 9);
+        BitConverter.GetBytes(Addresses.StartLoan).CopyTo(stub, 28);
         var form = new byte[0x100];
         f.CopyTo(form, 0);
         Mem.CallInGame(stub, form, 15000);
