@@ -50,6 +50,29 @@ const clubs = [
   { id: 1, name: 'Riverside FC', status: 1, reputation: 7400, founded: 1886, facilities: { training: 17, youthFacilities: 15, youthCoaching: 16, youthRecruitment: 14, corporate: 18 }, finances: { balance: 48250000, transferBudget: 15000000, wageBudget: 950000, wages: 870000 } },
   { id: 2, name: 'Harbour United', status: 2, reputation: 4100, founded: 1902, facilities: { training: 9, youthFacilities: 8, youthCoaching: 10, youthRecruitment: 7, corporate: 6 }, finances: { balance: -3200000, transferBudget: 2500000, wageBudget: 310000, wages: 325000 } },
 ];
+// Bank loans and sponsorship deals, worked out the way the engine does (repayments left include this month).
+const DEMO_TODAY = '2026-09-09';
+const monthsLeft = (from, to) => {
+  const a = new Date(from > DEMO_TODAY ? from : DEMO_TODAY), b = new Date(to);
+  return b < a ? 0 : (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth() + 1;
+};
+const loan = (index, amount, monthly, monthlyInterest, starts, ends) => ({ index, amount, monthly, monthlyInterest, starts, ends });
+const deal = (index, type, starts, ends, perSeason) => ({ index, type, starts, ends, perSeason });
+const DEALS = {
+  1: { debts: [loan(0, 120000000, 2400000, 310000, '2025-07-01', '2030-06-30')],
+    sponsorships: [deal(0, 'Kit Manufacturer', '2024-07-01', '2029-06-30', 18000000), deal(1, 'Main Kit', '2025-07-01', '2028-06-30', 12000000),
+      deal(2, 'Training Kit', '2026-07-01', '2029-06-30', 3000000), deal(3, 'General', '2023-07-01', '2026-06-30', 900000)] },
+  2: { debts: [], sponsorships: [deal(0, 'Main Kit', '2025-07-01', '2027-06-30', 450000)] },
+};
+function withDeals(c) {
+  const x = DEALS[c.id] || { debts: [], sponsorships: [] };
+  const seasons = (d) => Math.max(1, Math.round((new Date(d.ends) - new Date(d.starts)) / (365.25 * 864e5)));
+  return {
+    ...c,
+    debts: x.debts.map((d) => ({ ...d, monthsLeft: monthsLeft(d.starts, d.ends), toRepay: d.monthly * monthsLeft(d.starts, d.ends), interestLeft: d.monthlyInterest * monthsLeft(d.starts, d.ends) })),
+    sponsorships: x.sponsorships.map((d) => ({ ...d, total: d.perSeason * seasons(d), ended: d.ends < DEMO_TODAY })),
+  };
+}
 
 module.exports = {
   async status() {
@@ -159,7 +182,7 @@ module.exports = {
   async club(id) {
     const c = clubs.find((x) => x.id === id);
     if (!c) throw new Error('Club not found');
-    return structuredClone(c);
+    return structuredClone(withDeals(c));
   },
   async saveClub(id, changes) {
     const c = clubs.find((x) => x.id === id);
@@ -169,6 +192,6 @@ module.exports = {
     Object.assign(c.finances, money);
     if (reputation != null) c.reputation = reputation;
     Object.assign(c.facilities, facilities || {});
-    return { ok: true, club: structuredClone(c) };
+    return { ok: true, club: structuredClone(withDeals(c)) };
   },
 };

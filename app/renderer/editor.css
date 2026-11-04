@@ -134,3 +134,13 @@ img.logo { background: none; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.28); bo
 .club-actions { margin-top: 12px; }
 .squad-card .card-actions { justify-content: flex-start; flex-wrap: wrap; }
 @media (max-width: 760px) { .transfer-card .terms, .transfer-card .clauses { grid-template-columns: 1fr; } }
+
+/* Clubs page: tabs, bank loans and sponsorship deals */
+.club-tabs { margin: 4px 0 16px; }
+.deals-note { margin: 0 0 12px !important; column-span: all; }
+.deals-card .deal-row { border-top: 1px solid var(--line, rgba(255,255,255,.08)); padding: 10px 0 2px; }
+.deals-card .deal-row:first-of-type { border-top: 0; padding-top: 0; }
+.deals-card .deal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 14px; }
+.deals-card .deal-head span { font-weight: 600; }
+.deals-card .deal-row .card-note { margin: 4px 0 8px; }
+.deals-card details.deal-ended summary { cursor: pointer; font-size: 12px; color: var(--muted); padding: 8px 0; }

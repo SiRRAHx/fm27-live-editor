@@ -45,6 +45,16 @@ public static class Research
         // Every loan in the career grouped by its clause bits (loan +0xB0), with a few examples each,
         // to match the bits to FM's loan screen.
         // The objects a club's first team points at: offset, class, and their first bytes.
+        if (what == "write" && method == "POST")
+        {
+            // {"addr":"hex","hex":"bytes"}: puts back values found by hand. Research only.
+            var w = JsonSerializer.Deserialize<Dictionary<string, string>>(content);
+            long addr = Convert.ToInt64(w["addr"], 16);
+            var bytes = Convert.FromHexString(w["hex"]);
+            if (bytes.Length > 64) throw new EditorError("Too many bytes.", 400);
+            Log.Info($"Research write at {addr:X}: {w["hex"]}");
+            return Mem.Write(addr, bytes);
+        }
         if (what == "find" && method == "GET")
         {
             // ?hex=bytes: every place in FM's heap holding them (up to ?max=).

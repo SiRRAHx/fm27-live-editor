@@ -50,6 +50,12 @@ document.querySelectorAll('.nav').forEach((b) => b.addEventListener('click', () 
   document.querySelectorAll('main > section').forEach((s) => s.classList.toggle('hidden', s.id !== `tab-${b.dataset.tab}`));
   updateApplyBar();
 }));
+document.querySelectorAll('.club-tabs .type-tab').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.club-tabs .type-tab').forEach((t) => t.classList.toggle('active', t === b));
+  document.querySelectorAll('.club-pane').forEach((p) => p.classList.toggle('hidden', p.id !== `club-pane-${b.dataset.clubPane}`));
+  // Undo and Apply are for the Finances and Reputation tabs; the others act straight away or only show.
+  $('.club-actions').classList.toggle('hidden', !['finances', 'reputation'].includes(b.dataset.clubPane));
+}));
 document.querySelectorAll('.editor-tabs .type-tab').forEach((b) => b.addEventListener('click', () => {
   document.querySelectorAll('.editor-tabs .type-tab').forEach((t) => t.classList.toggle('active', t === b));
   document.querySelectorAll('.pane').forEach((p) => p.classList.toggle('hidden', p.id !== `pane-${b.dataset.pane}`));
@@ -484,6 +490,29 @@ async function openClub(id) {
   renderClub();
 }
 const money = (v) => `£${Math.round(v).toLocaleString()}`;
+const short = (v) => (Math.abs(v) >= 1e6 ? `£${(v / 1e6).toFixed(Math.abs(v) >= 1e8 ? 0 : 1)}M` : Math.abs(v) >= 1e3 ? `£${Math.round(v / 1e3)}K` : `£${v}`);
+
+// Bank loans and sponsorship deals, as FM's Debts and Sponsorship screens show them (not editable yet).
+function dealRow(title, value, note) {
+  return h('div', { class: 'deal-row' }, h('div', { class: 'deal-head' }, h('b', {}, title), h('span', {}, value)), h('p', { class: 'card-note' }, note));
+}
+function renderDeals() {
+  const debts = club.debts || [];
+  $('#debt-list').replaceChildren(...(debts.length ? debts.map((d) => dealRow(`${short(d.amount)} borrowed`, `${short(d.monthly)} a month`,
+    d.toRepay ? `${d.monthsLeft} repayment${d.monthsLeft === 1 ? '' : 's'} left until ${day(d.ends)}: ${short(d.toRepay)} to repay, ${short(d.interestLeft)} of it interest. Repayments from ${day(d.starts)}.` : 'Paid off.'))
+    : [h('p', { class: 'card-note' }, 'This club has no bank loans.')]));
+  // Like FM's screen: the named deals and the five biggest general ones, then the smaller partners.
+  const row = (d) => dealRow(d.type, `${short(d.perSeason)} a season`, `${d.ended ? 'Ended' : 'Runs'} ${day(d.starts)} to ${day(d.ends)}, ${short(d.total)} in all.`);
+  const deals = club.sponsorships || [];
+  const live = deals.filter((d) => !d.ended), ended = deals.filter((d) => d.ended);
+  const general = live.filter((d) => d.type === 'General').sort((a, b) => b.perSeason - a.perSeason);
+  const shown = live.filter((d) => d.type !== 'General' || general.indexOf(d) < 5), partners = general.slice(5);
+  const fold = (list, text) => (list.length ? [h('details', { class: 'deal-ended' }, h('summary', {}, text), list.map(row))] : []);
+  $('#deal-list').replaceChildren(
+    ...(live.length ? shown.map(row) : [h('p', { class: 'card-note' }, 'This club has no current sponsorship deals.')]),
+    ...fold(partners, `${partners.length} more partner deal${partners.length === 1 ? '' : 's'}, ${short(partners.reduce((t, d) => t + d.perSeason, 0))} a season`),
+    ...fold(ended, `${ended.length} ended deal${ended.length === 1 ? '' : 's'}`));
+}
 function renderClub() {
   $('#club-empty').classList.add('hidden');
   $('#club-editor').classList.remove('hidden');
@@ -510,6 +539,7 @@ function renderClub() {
   st.onchange = () => st.parentElement.classList.toggle('changed', +st.value !== club.status);
   for (const k of FACILITIES) num($(`#fac-${k}`), k in (club.facilities || {}), club.facilities?.[k], 1, 20);
   $('#club-founded').textContent = club.founded ? `Founded ${club.founded}.` : '';
+  renderDeals();
   if (!f) return;
   for (const k of FIELDS) {
     const input = $(`#f-${k}`);

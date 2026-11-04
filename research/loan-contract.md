@@ -160,3 +160,10 @@ The records sit in one big array for all clubs; the per-club vector only points 
 Scouting budget: not in the club, club info, finances or senior team. "Adjust Scouting Budget"
 changes only the transfer budget at finances + 0x7C4 there; the scouting figure was only found
 in UI copies (SCOUTING_INFO_UI_HANDLER + 0x264, next to the season's starting figure).
+
+Tested 4 Nov 2026: writing to those debt and sponsorship records (pay off the 169M loan, Training Kit
+to 25M a season) changed nothing on FM's Debts and Sponsorship screens, even after leaving the Club
+section and coming back. Both were put back byte for byte. The screens were built from somewhere
+else: the only other places with the old figures were a stack copy (the screen's own) and two
+identical packed blobs (count 3, then the debts, then what looks like the sponsorship deals), e.g.
+at an odd address like ...DF2. The live records are still to be found.

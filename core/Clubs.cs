@@ -117,6 +117,8 @@ public static class Clubs
                 ["wageBudget"] = BitConverter.ToInt32(b, WageBudgetAt),
                 ["wages"] = BitConverter.ToInt32(b, WagesAt),
             },
+            ["debts"] = ClubDeals.Debts(club),
+            ["sponsorships"] = ClubDeals.Sponsorships(club),
         };
     }
 

@@ -205,7 +205,13 @@
                 <h2>No finances found</h2>
                 <p>The editor couldn't find this club's finances, so they can't be changed.</p>
               </div>
-              <div class="contract-cards">
+              <div class="type-tabs club-tabs">
+                <button class="type-tab active" data-club-pane="finances">Finances</button>
+                <button class="type-tab" data-club-pane="reputation">Reputation and facilities</button>
+                <button class="type-tab" data-club-pane="squad">Whole squad</button>
+                <button class="type-tab" data-club-pane="deals">Loans and sponsors</button>
+              </div>
+              <div id="club-pane-finances" class="club-pane contract-cards">
                 <div id="finance-form" class="attr-card contract-card">
                   <h3>Finances</h3>
                   <label>Bank balance (£) <input id="f-balance" type="number" step="100000"></label>
@@ -213,14 +219,8 @@
                   <label>Wage budget per week (£) <input id="f-wageBudget" type="number" min="0" step="1000"></label>
                   <p class="card-note" id="f-wages"></p>
                 </div>
-                <div class="attr-card contract-card squad-card">
-                  <h3>Whole squad</h3>
-                  <p class="card-note">Changes every player under contract with the club, youth teams included.</p>
-                  <div class="card-actions">
-                    <button class="btn" data-squad="morale">Superb morale</button>
-                    <button class="btn" data-squad="fitness">Full fitness and sharpness</button>
-                  </div>
-                </div>
+              </div>
+              <div id="club-pane-reputation" class="club-pane contract-cards hidden">
                 <div id="club-form" class="attr-card contract-card">
                   <h3>Reputation and facilities</h3>
                   <label>Professional status <select id="r-status"><option value="1">Professional</option><option value="2">Semi-Professional</option><option value="3">Amateur</option></select></label>
@@ -231,6 +231,27 @@
                   <label>Youth recruitment (1–20) <input id="fac-youthRecruitment" type="number" min="1" max="20"></label>
                   <label>Corporate facilities (1–20) <input id="fac-corporate" type="number" min="1" max="20"></label>
                   <p class="card-note" id="club-founded"></p>
+                </div>
+              </div>
+              <div id="club-pane-squad" class="club-pane contract-cards hidden">
+                <div class="attr-card contract-card squad-card">
+                  <h3>Whole squad</h3>
+                  <p class="card-note">Changes every player under contract with the club, youth teams included.</p>
+                  <div class="card-actions">
+                    <button class="btn" data-squad="morale">Superb morale</button>
+                    <button class="btn" data-squad="fitness">Full fitness and sharpness</button>
+                  </div>
+                </div>
+              </div>
+              <div id="club-pane-deals" class="club-pane contract-cards hidden">
+                <p class="card-note deals-note">What FM shows on its Debts and Sponsorship screens. These can't be changed yet.</p>
+                <div class="attr-card contract-card deals-card">
+                  <h3>Bank loans</h3>
+                  <div id="debt-list"></div>
+                </div>
+                <div class="attr-card contract-card deals-card">
+                  <h3>Sponsorship deals</h3>
+                  <div id="deal-list"></div>
                 </div>
               </div>
               <div class="card-actions club-actions">
