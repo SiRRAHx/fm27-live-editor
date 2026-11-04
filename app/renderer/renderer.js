@@ -821,6 +821,18 @@ document.querySelectorAll('.bg-option').forEach((b) => b.addEventListener('click
   window.api.saveSettings({ background: b.dataset.bg });
 }));
 
+// --- What's new (after an app update) ---
+async function showWhatsNew() {
+  const w = await window.api.whatsNew();
+  if (!w) return;
+  $('#whats-new-title').textContent = `What's new in ${w.version}`;
+  $('#whats-new-sub').textContent = w.from ? `You've been updated from ${w.from}.` : "You've been updated.";
+  $('#whats-new-body').replaceChildren(...w.changes.map((c) => h('div', {},
+    w.changes.length > 1 && h('b', {}, c.version),
+    h('ul', { class: 'whats-new-list' }, ...c.items.map((t) => h('li', {}, t))))));
+  $('#whats-new-dialog').showModal();
+}
+
 (async () => {
   info = await window.api.info();
   const settings = await window.api.settings();
@@ -829,6 +841,7 @@ document.querySelectorAll('.bg-option').forEach((b) => b.addEventListener('click
   updateMove();
   $('#app-version').textContent = info.version;
   $('#demo-banner').classList.toggle('hidden', !info.demo);
+  showWhatsNew();
   await pollStatus();
   setInterval(pollStatus, 3000);
 })();

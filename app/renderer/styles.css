@@ -533,6 +533,11 @@ dialog label { display: flex; flex-direction: column; gap: 5px; font-size: 13px;
 #ask-dialog { width: min(440px, 92vw); padding: 24px 26px 22px; animation: pop 0.14s ease-out; }
 #ask-dialog h2 { font-size: 18px; margin: 0 0 8px; }
 .ask-text { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
+#whats-new-dialog { width: min(560px, 92vw); max-height: 86vh; overflow-y: auto; padding: 26px 28px 22px; animation: pop 0.14s ease-out; }
+#whats-new-dialog .ask-text { margin: 4px 0 0; }
+#whats-new-body b { display: block; margin: 6px 0 6px; font-size: 13px; color: var(--accent-light); }
+.whats-new-list { margin: 0; padding-left: 20px; color: var(--muted); font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 6px; }
+.whats-new-list li::marker { color: var(--accent); }
 .btn.danger { background: rgba(248, 113, 113, 0.16); border-color: rgba(248, 113, 113, 0.5); color: var(--err); }
 .btn.danger:hover { background: rgba(248, 113, 113, 0.26); }
 

@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('api', {
   info: () => ipcRenderer.invoke('info'),
   settings: () => ipcRenderer.invoke('settings'),
   saveSettings: (patch) => ipcRenderer.invoke('save-settings', patch),
+  whatsNew: () => ipcRenderer.invoke('whats-new'),
   status: () => ipcRenderer.invoke('status'),
   search: (q) => ipcRenderer.invoke('search', q),
   player: (id) => ipcRenderer.invoke('player', id),

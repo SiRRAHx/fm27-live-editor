@@ -13,6 +13,8 @@ function getSettings() {
     theme: s.theme || 'emerald',
     // Where FM27 is installed, once the in-game button has been set up.
     gameFolder: typeof s.gameFolder === 'string' ? s.gameFolder : null,
+    // The version last opened, for "What's new" after an update.
+    lastSeenVersion: typeof s.lastSeenVersion === 'string' ? s.lastSeenVersion : null,
   };
 }
 

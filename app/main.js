@@ -7,6 +7,7 @@ const graphics = require('./src/graphics');
 const store = require('./src/store');
 const addon = require('./src/addon');
 const { setupSelfUpdate } = require('./src/selfupdate');
+const { whatsNew } = require('./src/whatsnew');
 const { GROUPS, POSITIONS, SQUAD_STATUSES, label } = require('./src/attributes');
 
 // --demo uses made-up players, so the window can be tried without FM27.
@@ -50,6 +51,7 @@ ipcMain.handle('info', () => ({
   squadStatuses: SQUAD_STATUSES,
 }));
 ipcMain.handle('settings', () => store.getSettings());
+ipcMain.handle('whats-new', () => (demo ? null : whatsNew()));
 ipcMain.handle('save-settings', (_e, patch) => store.saveSettings(patch));
 ipcMain.handle('status', () => game.status());
 ipcMain.handle('search', (_e, q) => game.search(q));
