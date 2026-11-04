@@ -37,6 +37,7 @@ module.exports = {
   club: (id) => call(`/clubs/${id}`),
   saveClub: (id, changes) => call(`/clubs/${id}`, { method: 'PUT', body: JSON.stringify(changes) }),
   saveSquad: (id, values) => call(`/clubs/${id}`, { method: 'POST', body: JSON.stringify(values), timeout: 30000 }),
+  nations: () => call('/nations'),
   transferStatus: () => call('/transfers'),
   // action: move, swap, release, end-loan or undo.
   transfer: (action, req) => call(`/transfers/${action}`, { method: 'POST', body: JSON.stringify(req || {}), timeout: 30000 }),

@@ -131,3 +131,11 @@ Loan form -> loan contract, checked on FM's Loan Club screen with test loans:
 - form +0x40 -> loan +0x94 and form +0x44 -> loan +0x98: not shown on that screen (12 and 15 tried);
   probably the minimum games / stage FM's language file mentions, not used yet.
 The editor offers win / promotion / avoid relegation, always in the loan club's own league.
+
+## Nationality and national teams (4 Nov 2026)
+
+- P + 0x68: NATION (+0x8 id, +0x18 name). Changing it moves his caps with it on FM's screens.
+- P - 0x168: INTERNATIONAL_PLAYER_DATA. +0x2C senior debut date, +0x30 first goal date
+  (day-of-year word, year word). No nation in it.
+- P - 0x160: NATIONAL_TEAM of the squad he's in now (about 1 in 10 players; ~20 per team).
+- NATIONAL_TEAM records are 0x108 long: +0x8 id, +0x88 captain, +0x90 vice-captain.

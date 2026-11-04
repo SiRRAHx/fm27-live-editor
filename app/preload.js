@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   savePlayer: (id, changes) => ipcRenderer.invoke('save-player', id, changes),
   searchClubs: (q) => ipcRenderer.invoke('search-clubs', q),
   club: (id) => ipcRenderer.invoke('club', id),
+  nations: () => ipcRenderer.invoke('nations'),
   saveClub: (id, changes) => ipcRenderer.invoke('save-club', id, changes),
   saveSquad: (id, values) => ipcRenderer.invoke('save-squad', id, values),
   transferStatus: () => ipcRenderer.invoke('transfer-status'),

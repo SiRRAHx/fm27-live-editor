@@ -48,8 +48,11 @@ public static class Research
         if (what == "team-refs" && method == "GET")
         {
             long mod = Mem.ModuleBase("game_plugin.dll");
-            long team = Clubs.SeniorTeam(Clubs.Find(int.Parse(args["club"])));
-            var b = Mem.Read(team, 0x800);
+            // ?club=id: its first team; ?player=id: the player (from 0x300 before his person part);
+            // ?addr=hex: any object (?len= bytes).
+            long team = args.TryGetValue("addr", out var ad) ? Convert.ToInt64(ad, 16)
+                : args.TryGetValue("player", out var pid) ? Players.Find(int.Parse(pid)) - 0x300 : Clubs.SeniorTeam(Clubs.Find(int.Parse(args["club"])));
+            var b = Mem.Read(team, Math.Clamp(Arg("len", 0x800), 8, 0x2000));
             var list = new List<object>();
             for (int o = 0; b != null && o + 8 <= b.Length; o += 8)
             {
@@ -61,7 +64,7 @@ public static class Research
                 if (cls == null) continue;
                 var head = Mem.Read(ptr, 0x60);
                 var texts = new List<string>();
-                if (cls == ".?AVCOMP@db@@")
+                if (cls == ".?AVCOMP@db@@" || cls == ".?AVNATION@db@@" || cls == ".?AVNATIONAL_TEAM@db@@")
                     for (int k = 0x10; k < 0x200; k += 8)
                         if (Mem.ReadLenString(Mem.ReadPtr(ptr + k)) is { Length: > 1 and < 80 } t) texts.Add($"+0x{k:X} {t}");
                 list.Add(new { at = $"0x{o:X}", cls, ptr = $"0x{ptr:X}", head = head == null ? null : Convert.ToHexString(head), texts });

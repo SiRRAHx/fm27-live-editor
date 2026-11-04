@@ -12,6 +12,7 @@ const PEOPLE = [
   ['Demo Striker', 'Harbour United', 25, 'ST'], ['Demo Wonderkid', 'Harbour United', 17, 'ST'],
 ];
 
+const NATIONS = [{ id: 139, name: 'England' }, { id: 162, name: 'Portugal' }, { id: 167, name: 'Scotland' }, { id: 175, name: 'Wales' }];
 const players = PEOPLE.map(([name, club, age, pos], i) => {
   const attributes = {};
   for (const g of GROUPS) for (const k of g.keys) {
@@ -20,7 +21,7 @@ const players = PEOPLE.map(([name, club, age, pos], i) => {
   }
   const positions = Object.fromEntries(POSITIONS.map((p) => [p, p === pos ? 20 : pos !== 'GK' && p !== 'GK' ? rand(1, 12) : 1]));
   return {
-    id: 1000 + i, name, club, age, position: pos, ca: rand(90, 160), pa: rand(130, 185), attributes, positions,
+    id: 1000 + i, name, club, age, nation: NATIONS[i % 4].name, nationId: NATIONS[i % 4].id, position: pos, ca: rand(90, 160), pa: rand(130, 185), attributes, positions,
     status: { morale: rand(8, 16), condition: rand(80, 100) * 100, sharpness: rand(60, 100) * 100, homeReputation: rand(30, 80) * 100, currentReputation: rand(30, 80) * 100, worldReputation: rand(10, 60) * 100 },
     contract: {
       wage: rand(10, 180) * 1000, ends: `${2027 + rand(0, 4)}-06-30`, joined: `${2019 + rand(0, 6)}-07-01`, squadStatus: [1, 2, 3, 4, 13][i % 5], squadNumber: i + 1,
@@ -70,6 +71,7 @@ module.exports = {
     Object.assign(p.attributes, changes.attributes || {});
     Object.assign(p.positions, changes.positions || {});
     Object.assign(p.status, changes.status || {});
+    if (changes.nation != null) Object.assign(p, { nationId: changes.nation, nation: NATIONS.find((n) => n.id === changes.nation).name });
     if (changes.ca != null) p.ca = changes.ca;
     if (changes.pa != null) p.pa = changes.pa;
     const { clauses, ...rest } = changes.contract || {};
@@ -90,6 +92,9 @@ module.exports = {
     const squad = players.filter((p) => p.club === c.name);
     for (const p of squad) Object.assign(p.status, values);
     return { ok: true, players: squad.length };
+  },
+  async nations() {
+    return NATIONS;
   },
   async transferStatus() {
     return { today: '2026-09-09', lastMove: lastMove?.text || null };

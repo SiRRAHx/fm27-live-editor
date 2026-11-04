@@ -57,6 +57,7 @@ ipcMain.handle('player', (_e, id) => game.player(id));
 ipcMain.handle('save-player', (_e, id, changes) => game.savePlayer(id, changes));
 ipcMain.handle('search-clubs', (_e, q) => game.searchClubs(q));
 ipcMain.handle('club', (_e, id) => game.club(id));
+ipcMain.handle('nations', () => game.nations());
 ipcMain.handle('save-club', (_e, id, changes) => game.saveClub(id, changes));
 ipcMain.handle('save-squad', (_e, id, values) => game.saveSquad(id, values));
 ipcMain.handle('transfer-status', () => game.transferStatus());

@@ -138,11 +138,13 @@ public static class Server
                     int more = Loans.Write(p, loan);
                     if (req.heal) more += Health.Heal(p);
                     if (req.liftBans) more += Health.LiftBans(p);
+                    if (req.nation is int nation) more += Players.SetNation(p, nation);
                     if (more > 0) player = Players.Get(id);
                     return new Dictionary<string, object> { ["ok"] = true, ["player"] = player };
                 }
             }
         }
+        if (parts[1] == "nations" && parts.Length == 2 && method == "GET") return Players.Nations();
         if (parts[1] == "clubs")
         {
             if (parts.Length == 2 && method == "GET") return Clubs.Search(Query(q, "q"));
@@ -195,6 +197,7 @@ public static class Server
         public LoanChanges loan { get; set; }
         public bool heal { get; set; }
         public bool liftBans { get; set; }
+        public int? nation { get; set; }
         public Dictionary<string, int> status { get; set; }
     }
 

@@ -211,6 +211,24 @@ function renderStatus() {
     };
     mark();
   }
+  renderNation();
+}
+
+// Nationality: any nation a player holds in this career. The list is fetched once per career.
+let nations = null;
+async function renderNation() {
+  const sel = $('#s-nation');
+  const have = edit.nationId != null;
+  sel.disabled = !have;
+  if (have && !nations?.length) {
+    try { nations = await window.api.nations(); } catch { nations = null; }
+  }
+  const list = nations?.length ? nations : have ? [{ id: edit.nationId, name: edit.nation }] : [];
+  sel.replaceChildren(...list.map((n) => h('option', { value: n.id }, n.name)));
+  if (have) sel.value = edit.nationId;
+  const mark = () => { sel.parentElement.classList.toggle('changed', have && edit.nationId !== current.nationId); updateApplyBar(); };
+  sel.onchange = () => { edit.nationId = +sel.value; mark(); };
+  mark();
 }
 
 // Injuries and bans: healing or lifting is applied straight away, like FM does
@@ -367,6 +385,7 @@ function diff() {
   if (edit.ca !== current.ca) out.ca = edit.ca;
   if (edit.pa !== current.pa) out.pa = edit.pa;
   pick('status');
+  if (edit.nationId != null && edit.nationId !== current.nationId) out.nation = edit.nationId;
   if (edit.contract && current.contract) {
     const c = {};
     if (edit.contract.wage !== current.contract.wage) c.wage = edit.contract.wage;
@@ -397,7 +416,7 @@ function diff() {
 function changes() {
   const d = diff();
   return Object.keys(d.attributes || {}).length + Object.keys(d.positions || {}).length + ('ca' in d) + ('pa' in d)
-    + Object.keys(d.status || {}).length
+    + Object.keys(d.status || {}).length + ('nation' in d)
     + Object.keys(d.contract || {}).filter((k) => k !== 'clauses').length + Object.keys(d.contract?.clauses || {}).length
     + Object.keys(d.loan || {}).filter((k) => k !== 'clauses').length + Object.keys(d.loan?.clauses || {}).length;
 }

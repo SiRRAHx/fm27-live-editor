@@ -138,6 +138,7 @@ public static class Players
         lock (clubNames) clubNames.Clear();
         var found = new Dictionary<int, long>();
         var summaries = new List<PlayerSummary>();
+        var nationsFound = new Dictionary<int, (long ptr, string name)>();
         var buf = new byte[4 << 20];
         foreach (var (start, size) in Mem.HeapRegions())
         {
@@ -154,6 +155,10 @@ public static class Players
                     if (s == null || found.ContainsKey(s.id)) continue;
                     found[s.id] = p;
                     summaries.Add(s);
+                    // Every nation a player holds, so nationality can be changed to any of them.
+                    long n = Mem.ReadPtr(p + NationAt);
+                    if (n != 0 && Mem.ReadPtr(n) == nationVt && Mem.Read(n + 8, 4) is { } nb && !nationsFound.ContainsKey(BitConverter.ToInt32(nb, 0)))
+                        nationsFound[BitConverter.ToInt32(nb, 0)] = (n, Mem.ReadLenString(Mem.ReadPtr(n + 0x18)));
                 }
             }
         }
@@ -161,7 +166,7 @@ public static class Players
         lock (gate)
         {
             if (recheck && summaries.Count <= list.Count) { Log.Info($"Index recheck found {summaries.Count} players; keeping {list.Count}"); return; }
-            byId = found; list = summaries;
+            byId = found; list = summaries; nations = nationsFound;
         }
         IndexedAt = DateTime.Now;
         Log.Info($"Indexed {summaries.Count} players in {(DateTime.Now - started).TotalSeconds:F1}s");
@@ -279,6 +284,37 @@ public static class Players
         return list;
     }
 
+    static Dictionary<int, (long ptr, string name)> nations = new();
+
+    // The nations players hold in this career, by name.
+    public static List<Dictionary<string, object>> Nations()
+    {
+        lock (gate) return nations.Where(kv => kv.Value.name != null).OrderBy(kv => kv.Value.name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(kv => new Dictionary<string, object> { ["id"] = kv.Key, ["name"] = kv.Value.name }).ToList();
+    }
+
+    // Changes his nationality (P + 0x68) to another nation. FM keeps no nation with his caps
+    // (international data at P - 0x168), so they show for the new nation. The national squad he's in
+    // now (P - 0x160) and any second nationalities are left as they are. Returns 1 if it changed.
+    public static int SetNation(long p, int id)
+    {
+        (long ptr, string name) to;
+        lock (gate) if (!nations.TryGetValue(id, out to)) throw new EditorError("That nation isn't in this career.", 400);
+        long now = Mem.ReadPtr(p + NationAt);
+        if (now == to.ptr) return 0;
+        if (now == 0 || Mem.ReadPtr(now) != nationVt || Mem.ReadPtr(to.ptr) != nationVt) throw new EditorError("His nationality isn't where the editor expects, so it wasn't changed.", 409);
+        Backup.EnsureBackedUp();
+        if (!Mem.Write(p + NationAt, BitConverter.GetBytes(to.ptr))) throw new EditorError("The game refused the change.", 500);
+        Log.Info($"Nationality of player at 0x{p:X}: {Nation(p)}");
+        return 1;
+    }
+
+    static int? NationId(long p)
+    {
+        long n = Mem.ReadPtr(p + NationAt);
+        return n != 0 && Mem.ReadPtr(n) == nationVt && Mem.Read(n + 8, 4) is { } b ? BitConverter.ToInt32(b, 0) : null;
+    }
+
     static string Nation(long p)
     {
         long n = Mem.ReadPtr(p + NationAt);
@@ -346,7 +382,7 @@ public static class Players
         {
             ["id"] = id, ["uid"] = Uid(p), ["clubUid"] = ClubOf(p) is var club && club != 0 ? Uid(club) : null, ["clubBadgeUid"] = club != 0 && MensClub(club) is var men && men != 0 ? Uid(men) : null, ["name"] = s.name, ["born"] = s.born, ["position"] = s.position, ["club"] = s.club,
             ["ca"] = Ability(p).ca, ["pa"] = Ability(p).pa, ["contract"] = ContractInfo(p), ["loan"] = Loans.Info(p), ["health"] = Health.Info(p), ["status"] = Status(p),
-            ["fullName"] = Mem.ReadLenString(Mem.ReadPtr(p + 0x40)), ["nation"] = Nation(p),
+            ["fullName"] = Mem.ReadLenString(Mem.ReadPtr(p + 0x40)), ["nation"] = Nation(p), ["nationId"] = NationId(p),
             ["attributes"] = attributes, ["positions"] = positions,
         };
     }
