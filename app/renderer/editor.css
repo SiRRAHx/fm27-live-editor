@@ -110,6 +110,9 @@ img.logo { background: none; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.28); bo
 .transfer-card .clauses h4 { grid-column: 1 / -1; margin: 4px 0 0; font-size: 12px; font-weight: 600; color: var(--muted); }
 .transfer-card .clause input.toggle { width: 42px; padding: 0; }
 .transfer-card .clause input[type=date] { width: auto; font-size: 13px; padding: 4px 8px; }
+.clause input.toggle { width: 42px; padding: 0; }
+.contract-card label.clause { flex-direction: row; color: var(--text); }
+.loan-clauses { display: flex; flex-direction: column; gap: 8px; }
 .transfer-card .clause { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; flex-wrap: wrap; }
 .transfer-card .recall-from { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
 .transfer-card .recall-from.hidden { display: none; }

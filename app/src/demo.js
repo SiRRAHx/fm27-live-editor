@@ -38,7 +38,8 @@ players.forEach((p) => { if (p.pa < p.ca) p.pa = p.ca; });
 const fold = (t) => (t || '').normalize('NFD').replace(/\p{Mn}/gu, '').toLowerCase();
 
 // One demo player is on loan from another club.
-Object.assign(players[1], { loan: { club: players[1].club, wage: 55000, starts: '2026-07-24', ends: '2027-06-30', monthlyFee: 150000, unusedFee: 300000, futureFee: null } });
+Object.assign(players[1], { loan: { club: players[1].club, wage: 55000, starts: '2026-07-24', ends: '2027-06-30', monthlyFee: 150000, unusedFee: 300000, futureFee: null,
+  clauses: { recall: true, cannotTerminate: true, cupForParent: false, againstParent: false, cupMatches: true }, futureFeeIf: null, league: 'Premier League' } });
 players[1].contract.club = 'Harbour United';
 players.forEach((p) => { p.health = { injuries: [], bans: [] }; });
 players[2].health = { injuries: [{ name: 'calf strain', started: '2026-08-20', backFrom: '2026-09-06', backBy: '2026-10-03' }], bans: [{ matches: 2 }] };
@@ -75,7 +76,11 @@ module.exports = {
     Object.assign(p.contract, rest);
     for (const [i, v] of Object.entries(clauses || {})) p.contract.clauses[i].value = v;
     if (p.contract.squadNumber === 0) p.contract.squadNumber = null;
-    for (const [k, v] of Object.entries(changes.loan || {})) p.loan[k] = v === -1 ? null : v;
+    for (const [k, v] of Object.entries(changes.loan || {})) {
+      if (k === 'clauses') Object.assign(p.loan.clauses, v);
+      else if (k === 'futureFeeIf') p.loan.futureFeeIf = v || null;
+      else p.loan[k] = v === -1 ? null : v;
+    }
     if (changes.heal) p.health.injuries = [];
     if (changes.liftBans) p.health.bans = [];
     return { ok: true, player: structuredClone(p) };

@@ -303,6 +303,9 @@ function renderContract() {
 }
 
 const LOAN_FEES = ['monthlyFee', 'unusedFee', 'futureFee'];
+// FM's names for the loan clauses, in the order its contract screen lists them.
+const LOAN_CLAUSES = [['recall', 'Can be recalled'], ['cannotTerminate', 'Loan cannot be terminated'], ['cupForParent', 'Can play for parent club in cup matches'],
+  ['againstParent', 'Can play against own team'], ['cupMatches', 'Can play in cup matches']];
 function renderLoan() {
   const l = edit.loan;
   $('#loan-form').classList.toggle('hidden', !l);
@@ -315,12 +318,31 @@ function renderLoan() {
     wage.parentElement.classList.toggle('changed', edit.loan.wage !== current.loan.wage);
     ends.parentElement.classList.toggle('changed', edit.loan.ends !== current.loan.ends);
     for (const k of LOAN_FEES) $(`#l-${k}`).parentElement.classList.toggle('changed', (edit.loan[k] ?? null) !== (current.loan[k] ?? null));
+    $('#l-futureFeeIf').parentElement.classList.toggle('changed', (edit.loan.futureFeeIf ?? null) !== (current.loan.futureFeeIf ?? null));
+    LOAN_CLAUSES.forEach(([k], i) => $('#l-clauses').children[i]?.classList.toggle('changed', !!edit.loan.clauses?.[k] !== !!current.loan.clauses?.[k]));
     updateApplyBar();
   };
   wage.value = l.wage;
   ends.value = l.ends || '';
   wage.onchange = () => { edit.loan.wage = clamp(wage.value, 0, 10000000); wage.value = edit.loan.wage; mark(); };
   ends.onchange = () => { if (ends.value) edit.loan.ends = ends.value; else ends.value = edit.loan.ends; mark(); };
+  // The future fee's condition, in the loan club's league. A condition the editor can't set (such as
+  // qualifying for a competition) is shown but stays as it is unless another one is picked.
+  l.clauses ||= {};
+  const feeIf = $('#l-futureFeeIf');
+  const league = l.league || 'league';
+  feeIf.replaceChildren(h('option', { value: '' }, 'If the loan club wants (optional)'),
+    ...Object.entries(FEE_IF).map(([v, name]) => h('option', { value: v }, name(league))),
+    ...(['qualify', 'other'].includes(current.loan.futureFeeIf) ? [h('option', { value: current.loan.futureFeeIf, disabled: true },
+      current.loan.futureFeeIf === 'qualify' ? 'If they qualify for a competition' : 'Another condition')] : []));
+  feeIf.value = l.futureFeeIf || '';
+  feeIf.onchange = () => { edit.loan.futureFeeIf = feeIf.value || null; mark(); };
+  $('#l-clauses').replaceChildren(...LOAN_CLAUSES.map(([k, name]) => {
+    const box = h('input', { type: 'checkbox', class: 'toggle' });
+    box.checked = !!l.clauses?.[k];
+    box.onchange = () => { edit.loan.clauses[k] = box.checked; mark(); };
+    return h('label', { class: 'clause' }, box, ` ${name}`);
+  }));
   for (const k of LOAN_FEES) {
     const input = $(`#l-${k}`);
     input.value = l[k] ?? '';
@@ -365,6 +387,9 @@ function diff() {
     if (edit.loan.ends !== current.loan.ends) l.ends = edit.loan.ends;
     // The game stores "no fee" as -1.
     for (const k of LOAN_FEES) if ((edit.loan[k] ?? null) !== (current.loan[k] ?? null)) l[k] = edit.loan[k] ?? -1;
+    if ((edit.loan.futureFeeIf ?? null) !== (current.loan.futureFeeIf ?? null)) l.futureFeeIf = edit.loan.futureFeeIf ?? '';
+    const clauses = Object.fromEntries(LOAN_CLAUSES.map(([k]) => k).filter((k) => !!edit.loan.clauses?.[k] !== !!current.loan.clauses?.[k]).map((k) => [k, !!edit.loan.clauses[k]]));
+    if (Object.keys(clauses).length) l.clauses = clauses;
     if (Object.keys(l).length) out.loan = l;
   }
   return out;
@@ -374,7 +399,7 @@ function changes() {
   return Object.keys(d.attributes || {}).length + Object.keys(d.positions || {}).length + ('ca' in d) + ('pa' in d)
     + Object.keys(d.status || {}).length
     + Object.keys(d.contract || {}).filter((k) => k !== 'clauses').length + Object.keys(d.contract?.clauses || {}).length
-    + Object.keys(d.loan || {}).length;
+    + Object.keys(d.loan || {}).filter((k) => k !== 'clauses').length + Object.keys(d.loan?.clauses || {}).length;
 }
 function updateApplyBar() {
   const n = changes();

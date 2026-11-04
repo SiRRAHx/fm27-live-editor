@@ -48,7 +48,7 @@ public static class LoanStart
     // A future fee's condition: the competition (+0x3C) and what has to happen in it (+0x48), as on
     // FM's own loans (Broja: winning League One 14, Zappa: promotion 3, Danso: avoiding relegation 6).
     const int FeeCompAt = 0x3C, FeeIfAt = 0x48;
-    static readonly System.Collections.Generic.Dictionary<string, byte> FeeIf = new() { ["win"] = 14, ["promotion"] = 3, ["relegation"] = 6 };
+    internal static readonly System.Collections.Generic.Dictionary<string, byte> FeeIf = new() { ["win"] = 14, ["promotion"] = 3, ["relegation"] = 6 };
 
     // An FM date with no flags: day of the year, then the year.
     static byte[] Date(DateTime d) => new[] { (byte)(d.DayOfYear & 0xFF), (byte)(d.DayOfYear >> 8), (byte)(d.Year & 0xFF), (byte)(d.Year >> 8) };
