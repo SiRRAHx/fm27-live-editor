@@ -167,3 +167,63 @@ section and coming back. Both were put back byte for byte. The screens were buil
 else: the only other places with the old figures were a stack copy (the screen's own) and two
 identical packed blobs (count 3, then the debts, then what looks like the sponsorship deals), e.g.
 at an odd address like ...DF2. The live records are still to be found.
+
+Parked 4 Nov 2026. After one day of Continue the heap debt and deal records (and the packed blobs)
+were at new addresses with my test edits gone, so all of them are rebuilt by FM each day. Not yet
+found: what they're rebuilt from. Searching the heap for the loan amounts as int64 only turned up
+generic value nodes (all pointing at one shared node). Next ideas: the code that fills club info +
+0x50 and club + 0x130, PROCESS_CLUB_LOANS_AND_DEBTS, and the CLUB_BUDGET_ADJUSTMENT_* and
+SCOUTING_INFO_UI_HANDLER_SERVER handlers (where the server side gets its figures).
+
+National team test (Test save, 4 Nov 2026): Bellingham and Mainoo switched to Wales on 2 Sep 2026.
+FM's profile then says "Wales, 56 caps" and "Eligibility: Plays for Wales", but Bellamy's squad for
+the late-September window (named 21 Sep) had neither, and they're in no other squad either.
+NATIONAL_TEAM + 0x38 is the current squad (vector of person pointers, P - 0x288); the international
+data's +0x50 vector holds the current call-up (empty when not selected). No per-nation candidate
+list was found in NATIONAL_TEAM, NATION or the international data. A TEAM object (0xB8 long, id at
++0x8) keeps a 23-player list at +0x38 that still includes Bellingham alongside England's earlier
+squad. Still to find: how the AI chooses its candidates (maybe players it has watched or knows).
+
+Morale (same day): FM's words for the 1-20 value: 20 Perfect, 16 Extremely Good, 13 Good,
+11 Fairly Good, 10 Okay, 8 Fair, 7 Slightly Poor, 4 Poor, 1 Abysmal. The squad screen keeps the
+old icons until the day moves on. FM moves low morale back up about 5 points a day.
+
+Tactical familiarity (4 Nov 2026): in FM27 it's "Tactical Understanding", shown per player on the
+Tactics screen (Selection Info > Tactical Understanding) as pies for Passing Style, Build Up, Chance
+Creation, In Possession Shape, Pressing Intensity, Pressing Trap, Out Of Possession Shape, Line of
+Engagement, plus Player Tactical Ability and Tactical Complexity. No numbers are shown. One day of
+Continue (2-4 Sep, no match) changed nothing that looked like it in memory around 10 Man Utd players
+(P - 0x1000 .. P + 0x1000 and the objects it points to) or in the club's objects 3 levels deep, as
+floats, doubles or small ints. It may only move after matches or weekly. FM has an in-game-editor
+action TEAM_MAXIMISE_TACTICAL_UNDERSTANDING_ACTION (vt rva 0x4c77658); its slots only build text
+and dispatch, so where it writes wasn't found. Not called (it's SI's paid editor).
+Later the same day: a week of training (4 Tactical Understanding sessions) and a match (Everton 4-2
+Man Utd, instant result) still changed nothing in memory that matched the pies, around the players
+(two levels deep) or the club (three levels, 129k objects). FM's tooltips say each area is made from
+"recent training sessions", "recent matches", the player's tactical ability and the tactic's
+complexity, so it looks worked out each time from history rather than stored. Shelved.
+
+## Squad registration at any time (4 Nov 2026, shelved for now)
+
+- SI's IGE has TEAM_CONTAINER_ALLOW_SQUAD_REGISTRATION_ANYTIME_ACTION. Its menu code (rva 0x103b600/0x103b800)
+  only builds the tick box; the flag it shows is bit 0 of byte +0x3FD on the object FM passes in.
+- FM reads that bit in two places (rva 0x313f802, inside the registration-window check at 0x313f650, and
+  0x3594a1b). Both only look at it when the IGE's global switches are on (bytes at rva 0x567f93b, 0x567f94f,
+  0x567f900, 0x567f951, 0x56843d0). In a normal game they are off, so the bit does nothing.
+- Turning those switches on would be unlocking the paid IGE, so that route is out.
+- The other route: the same check compares today against window dates at +0x3C/+0x3E of an object it gets
+  from the competition (0x3b00b40 on [0x56759b0]+0x18). Moving those dates would open the window for every
+  club in that competition. Not tried yet.
+
+## Owner money / sugar daddy (4 Nov 2026)
+
+- CLUB_FINANCE + 0x34 (byte). FM's monthly owner-funding code (rva 0x13df8a0, called from the club's month
+  routine at 0x377d840 that also makes SUGAR_DADDY_WITHDRAWS_FUNDING_NEWS) skips owner money when it's 0 and
+  moves it itself (1 -> 2 or 3, -> 3 when the owner withdraws).
+- Values seen (Test save): Man City and PSG 1, Como, Wolves, Hull, AEK 2, Chelsea, Leeds, Bournemouth and
+  most owner-backed clubs 3, Monaco, Nantes, Hartlepool 4, Man Utd and 244 of 313 clubs 0. That fits the
+  community names: 1 foreground, 2 background, 3 underwriter, 4 underwriter that expects returns.
+- FM's Club Info "Owner Status" ("Loves the club") is something else: it didn't change.
+- Test: Man Utd set to 1, then 2 months on holiday (once with £169M, once from -£50M). FM kept the value at 1,
+  but no owner money showed up (Investments £10k and £7k, same as before). FM may only pay out at other times
+  (transfer windows, board requests, end of season), so the effect is not shown yet.

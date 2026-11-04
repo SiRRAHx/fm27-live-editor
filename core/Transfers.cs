@@ -199,21 +199,6 @@ public static class Transfers
         ps.Add(d.p + TeamAt, d.team, senior);
     }
 
-    // The buying club pays out of its balance and transfer budget; the selling club's balance takes it.
-    static void Fee(long buyer, long seller, int fee, Patches ps)
-    {
-        if (fee == 0) return;
-        if (fee < 0 || fee > 2_000_000_000) throw new EditorError("The fee must be between 0 and 2,000,000,000.", 400);
-        long fb = Clubs.Finances(buyer), fs = Clubs.Finances(seller);
-        if (fb == 0 || fs == 0) throw new EditorError("One of the clubs has no finances the editor can change, so no fee can be paid. Move him for free instead.", 400);
-        int Get(long f, int at) => BitConverter.ToInt32(Mem.Read(f + at, 4) ?? throw new EditorError("Couldn't read the finances.", 500), 0);
-        int Clamp(long v) => (int)Math.Clamp(v, int.MinValue, int.MaxValue);
-        int bal = Get(fb, Clubs.BalanceAt), budget = Get(fb, Clubs.TransferBudgetAt), sbal = Get(fs, Clubs.BalanceAt);
-        ps.Add(fb + Clubs.BalanceAt, BitConverter.GetBytes(bal), BitConverter.GetBytes(Clamp((long)bal - fee)));
-        ps.Add(fb + Clubs.TransferBudgetAt, BitConverter.GetBytes(budget), BitConverter.GetBytes(Clamp(Math.Max(0L, (long)budget - fee))));
-        ps.Add(fs + Clubs.BalanceAt, BitConverter.GetBytes(sbal), BitConverter.GetBytes(Clamp((long)sbal + fee)));
-    }
-
     // Checks every patch still finds the bytes it expects, then writes them in order.
     static void Write(List<Patch> ps, string text, Func<bool> stillValid)
     {
@@ -238,6 +223,8 @@ public static class Transfers
     {
         lock (gate)
         {
+            // Moving him now is always free. A fee goes through FM as an agreed transfer (FutureTransfer).
+            if ((req.terms?.fee ?? 0) != 0) throw new EditorError("A move now is free. Agree a transfer to pay a fee.", 400);
             var d = Leaving(req.player);
             var a = Joining(Clubs.Find(req.club), d);
             if (a.list.Count + 1 > a.list.Room())
@@ -247,7 +234,6 @@ public static class Transfers
             NewContract(d, a.senior, req.terms, ps);
             Captaincies(d, ps);
             foreach (var (_, list, index, el) in d.leaving) Remove(list, index, el, ps);
-            Fee(a.club, d.club, req.terms?.fee ?? 0, ps);
             string text = $"Moved {Name(d.p)} from {Players.ClubName(d.club)} to {Players.ClubName(a.club)}";
             Write(ps.list, text, () => Players.Valid(d.p) && Players.Contract(d.p) == d.contract);
             Players.Refresh(req.player);
@@ -389,7 +375,7 @@ public class MoveTerms
 {
     public int? wage { get; set; }
     public string ends { get; set; }
-    public int? fee { get; set; }
+    public int? fee { get; set; } // must be 0 or missing: moves now are free
 }
 
 public class MoveRequest
@@ -397,7 +383,5 @@ public class MoveRequest
     public int player { get; set; }
     public int club { get; set; }
     public int? other { get; set; }
-    // No longer checked here: the app uses your clubs only to warn before a player leaves one.
-    public int[] humanClubs { get; set; }
     public MoveTerms terms { get; set; }
 }

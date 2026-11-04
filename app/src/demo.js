@@ -47,8 +47,8 @@ players[2].health = { injuries: [{ name: 'calf strain', started: '2026-08-20', b
 
 let lastMove = null;
 const clubs = [
-  { id: 1, name: 'Riverside FC', status: 1, reputation: 7400, founded: 1886, facilities: { training: 17, youthFacilities: 15, youthCoaching: 16, youthRecruitment: 14, corporate: 18 }, finances: { balance: 48250000, transferBudget: 15000000, wageBudget: 950000, wages: 870000 } },
-  { id: 2, name: 'Harbour United', status: 2, reputation: 4100, founded: 1902, facilities: { training: 9, youthFacilities: 8, youthCoaching: 10, youthRecruitment: 7, corporate: 6 }, finances: { balance: -3200000, transferBudget: 2500000, wageBudget: 310000, wages: 325000 } },
+  { id: 1, name: 'Riverside FC', status: 1, owner: 0, reputation: 7400, founded: 1886, facilities: { training: 17, youthFacilities: 15, youthCoaching: 16, youthRecruitment: 14, corporate: 18 }, finances: { balance: 48250000, transferBudget: 15000000, wageBudget: 950000, wages: 870000 } },
+  { id: 2, name: 'Harbour United', status: 2, owner: 3, reputation: 4100, founded: 1902, facilities: { training: 9, youthFacilities: 8, youthCoaching: 10, youthRecruitment: 7, corporate: 6 }, finances: { balance: -3200000, transferBudget: 2500000, wageBudget: 310000, wages: 325000 } },
 ];
 // Bank loans and sponsorship deals, worked out the way the engine does (repayments left include this month).
 const DEMO_TODAY = '2026-09-09';
@@ -156,6 +156,18 @@ module.exports = {
       lastMove = null;
       return { ok: true, message: `Loaned ${p.name} to ${to.name} until ${req.ends}`, canUndo: false };
     }
+    if (action === 'future') {
+      const to = clubs.find((c) => c.id === req.club);
+      if (to.name === p.club) throw new Error('He already plays for that club.');
+      if (p.loan) throw new Error("He's on loan. End the loan first.");
+      const from = clubs.find((c) => c.name === p.club);
+      if (req.fee > 0) {
+        to.finances.transferBudget = Math.max(0, to.finances.transferBudget - req.fee);
+        if (from) from.finances.transferBudget += req.fee;
+      }
+      lastMove = null;
+      return { ok: true, message: `${p.name} agreed to join ${to.name} on ${req.date} for £${(req.fee || 0).toLocaleString('en-GB')}`, canUndo: false };
+    }
     let text;
     const before = [[p, p.club]];
     if (action === 'move') {
@@ -187,8 +199,9 @@ module.exports = {
   async saveClub(id, changes) {
     const c = clubs.find((x) => x.id === id);
     if (!c) throw new Error('Club not found');
-    const { reputation, facilities, status, ...money } = changes;
+    const { reputation, facilities, status, owner, ...money } = changes;
     if (status != null) c.status = status;
+    if (owner != null) c.owner = owner;
     Object.assign(c.finances, money);
     if (reputation != null) c.reputation = reputation;
     Object.assign(c.facilities, facilities || {});

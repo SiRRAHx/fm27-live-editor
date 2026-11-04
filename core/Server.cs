@@ -169,6 +169,7 @@ public static class Server
             if (parts.Length == 3 && method == "POST")
             {
                 if (parts[2] == "undo") return Transfers.Undo();
+                if (parts[2] == "future") return FutureTransfer.Start(JsonSerializer.Deserialize<FutureTransfer.Request>(content) ?? throw new EditorError("Bad request.", 400));
                 if (parts[2] == "loan") return LoanStart.Start(JsonSerializer.Deserialize<LoanStart.Request>(content) ?? throw new EditorError("Bad request.", 400));
                 var req = JsonSerializer.Deserialize<MoveRequest>(content) ?? throw new EditorError("Bad request.", 400);
                 if (parts[2] == "move") return Transfers.Move(req);

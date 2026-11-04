@@ -25,6 +25,16 @@ public static class Clubs
     // professional, Scarborough Athletic semi-professional); the write is not yet tested.
     const int StatusAt = 0x16A;
     public static readonly Dictionary<int, string> Statuses = new() { [1] = "Professional", [2] = "Semi-Professional", [3] = "Amateur" };
+    // The owner's money in the finances (+0x34): 0 none, 1 foreground (spends big), 2 background,
+    // 3 underwriter (covers losses), 4 underwriter that expects the money back. Found from FM's
+    // monthly owner-funding code (the sugar-daddy-withdraws news) and checked against the clubs
+    // (Man City and PSG 1, Chelsea 3, Monaco 4, Man Utd 0) in the Test save, 4 Nov 2026. FM moves
+    // it itself as owners lose interest.
+    const int OwnerAt = 0x34;
+    public static readonly Dictionary<int, string> Owners = new()
+    {
+        [0] = "None", [1] = "Foreground", [2] = "Background", [3] = "Underwriter", [4] = "Underwriter (expects returns)",
+    };
     public record Facility(string key, int at);
     public static readonly Facility[] Facilities =
     {
@@ -97,6 +107,7 @@ public static class Clubs
         long club = Find(id);
         long f = Finances(club);
         var b = f == 0 ? null : Mem.Read(f, CorporateAt + 1);
+        int? owner = b != null && Owners.ContainsKey(b[OwnerAt]) ? b[OwnerAt] : null;
         long info = Info(club);
         var ib = info == 0 ? null : Mem.Read(info, 0x130);
         var facilities = ib == null ? new Dictionary<string, int>() : Facilities.ToDictionary(x => x.key, x => (int)ib[x.at]);
@@ -110,6 +121,7 @@ public static class Clubs
             ["founded"] = ib == null ? null : BitConverter.ToUInt16(ib, FoundedAt),
             ["status"] = Mem.Read(club + StatusAt, 1) is { } st && Statuses.ContainsKey(st[0]) ? st[0] : null,
             ["facilities"] = facilities,
+            ["owner"] = owner,
             ["finances"] = b == null ? null : new Dictionary<string, object>
             {
                 ["balance"] = BitConverter.ToInt32(b, BalanceAt),
@@ -195,6 +207,13 @@ public static class Clubs
             if (cur == null || !Statuses.ContainsKey(cur[0])) throw new EditorError("Couldn't find this club's status.", 400);
             other.Add((club + StatusAt, new[] { (byte)status }));
         }
+        if (changes.owner is int owner)
+        {
+            if (!Owners.ContainsKey(owner)) throw new EditorError("Unknown owner type.", 400);
+            var cur = f == 0 ? null : Mem.Read(f + OwnerAt, 1);
+            if (cur == null || !Owners.ContainsKey(cur[0])) throw new EditorError("Couldn't find this club's owner.", 400);
+            other.Add((f + OwnerAt, new[] { (byte)owner }));
+        }
         foreach (var (key, v) in changes.facilities ?? new())
         {
             if (v < 1 || v > 20) throw new EditorError("Facilities must be 1 to 20.", 400);
@@ -250,6 +269,8 @@ public class FinanceChanges
     public int? reputation { get; set; }
     // 1 professional, 2 semi-professional, 3 amateur.
     public int? status { get; set; }
+    // 0-4, see Clubs.Owners.
+    public int? owner { get; set; }
     // 1-20: training, youthFacilities, youthCoaching, youthRecruitment, corporate.
     public Dictionary<string, int> facilities { get; set; }
 }

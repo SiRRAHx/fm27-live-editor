@@ -262,10 +262,9 @@ async function healthAction(change, done) {
 $('#h-heal').addEventListener('click', () => healthAction({ heal: true }, 'Injuries healed.'));
 $('#h-lift').addEventListener('click', () => healthAction({ liftBans: true }, 'Bans lifted.'));
 $('#l-end').addEventListener('click', async () => {
-  const note = isMine(current.loan.club) ? ` ${yourClubNote(current.name)}` : '';
-  if (!(await ask(`He leaves ${current.loan.club} and goes back to ${current.contract.club}. You can undo it on the Transfers page until the game moves on.${note}`, { title: `End ${current.name}'s loan?`, ok: 'End loan' }))) return;
+  if (!(await ask(`He goes back to ${current.contract.club}. Are you sure?`, { title: `End ${current.name}'s loan?`, ok: 'Confirm' }))) return;
   try {
-    const res = await window.api.transfer('end-loan', { player: current.id, humanClubs: myClubs.map((c) => c.id) });
+    const res = await window.api.transfer('end-loan', { player: current.id });
     toast(`${res.message}. ${status.demo ? '' : 'Reopen his profile in FM to see it.'}`);
     showLastMove(res.message);
     openPlayer(current.id);
@@ -478,6 +477,7 @@ function clubChanges() {
   const out = club.finances ? Object.fromEntries(FIELDS.map((k) => [k, +$(`#f-${k}`).value]).filter(([k, v]) => v !== club.finances[k])) : {};
   if (club.reputation != null && +$('#r-reputation').value !== club.reputation) out.reputation = +$('#r-reputation').value;
   if (club.status != null && +$('#r-status').value !== club.status) out.status = +$('#r-status').value;
+  if (club.owner != null && +$('#f-owner').value !== club.owner) out.owner = +$('#f-owner').value;
   const fac = Object.fromEntries(FACILITIES.filter((k) => k in (club.facilities || {}))
     .map((k) => [k, +$(`#fac-${k}`).value]).filter(([k, v]) => v !== club.facilities[k]));
   if (Object.keys(fac).length) out.facilities = fac;
@@ -537,6 +537,11 @@ function renderClub() {
   st.value = club.status ?? 1;
   st.parentElement.classList.remove('changed');
   st.onchange = () => st.parentElement.classList.toggle('changed', +st.value !== club.status);
+  const own = $('#f-owner');
+  own.disabled = club.owner == null;
+  own.value = club.owner ?? 0;
+  own.parentElement.classList.remove('changed');
+  own.onchange = () => own.parentElement.classList.toggle('changed', +own.value !== club.owner);
   for (const k of FACILITIES) num($(`#fac-${k}`), k in (club.facilities || {}), club.facilities?.[k], 1, 20);
   $('#club-founded').textContent = club.founded ? `Founded ${club.founded}.` : '';
   renderDeals();
@@ -616,26 +621,11 @@ function picker(box, placeholder, search, label, onPick) {
   return { clear: () => { show(null); onPick(null); } };
 }
 
-let myClubs = [];
-let mode = 'move';
+let mode = 'deal';
 const pick = { player: null, club: null, other: null };
 const playerLabel = (p) => [p.name, [p.club || 'No club', p.position, p.born && `born ${p.born}`].filter(Boolean).join(' · ')];
 const clubLabel = (c) => [c.name, null];
 
-function renderMyClubs() {
-  $('#my-clubs').replaceChildren(...(myClubs.length ? myClubs.map((c) => h('span', { class: 'chip' }, c.name,
-    h('button', { title: 'Remove', onclick: () => { myClubs = myClubs.filter((x) => x.id !== c.id); saveMyClubs(); } }, '×')))
-    : [h('span', { class: 'card-note' }, 'Pick the club you manage before making transfers.')]));
-  updateMove();
-}
-function saveMyClubs() { window.api.saveSettings({ myClubs }); renderMyClubs(); }
-
-const myPicker = picker($('#my-club-pick'), 'Search for your club', (q) => window.api.searchClubs(q), clubLabel, (c) => {
-  if (!c) return;
-  if (!myClubs.some((x) => x.id === c.id)) myClubs.push({ id: c.id, name: c.name });
-  saveMyClubs();
-  setTimeout(() => myPicker.clear());
-});
 const pickers = {
   player: picker($('#t-player'), 'Search for a player', (q) => window.api.search(q), playerLabel, (p) => { pick.player = p; checkOnLoan(); updateMove(); }),
   club: picker($('#t-club'), 'Search for a club', (q) => window.api.searchClubs(q), clubLabel, (c) => { pick.club = c; showLeague(c); updateMove(); }),
@@ -648,6 +638,7 @@ document.querySelectorAll('#move-tabs .type-tab').forEach((b) => b.addEventListe
   document.querySelectorAll('#transfers-ui [data-modes]').forEach((el) => el.classList.toggle('hidden', !el.dataset.modes.split(' ').includes(mode)));
   $('#t-club-label').textContent = mode === 'loan' ? 'Loan club' : 'New club';
   if (mode === 'loan' && !$('#loan-ends').value) $('#loan-ends').value = seasonEnd();
+  if (mode === 'deal' && !$('#t-date').value) $('#t-date').value = tomorrow();
   updateMove();
 }));
 
@@ -676,28 +667,24 @@ async function checkOnLoan() {
   updateMove();
 }
 
-// A player leaving a club you manage: FM drops him from your tactic, bench and squad
-// registration by itself, but your team for the next match may need a look.
-const isMine = (clubName) => myClubs.some((c) => c.name === clubName);
-const yourClubNote = (name) => `${name} is at your club: FM takes him out of your tactic, bench and squad registration by itself, so check your team before the next match.`;
 
 function updateMove() {
   const btn = $('#t-go');
   // A player already out on loan can have that loan ended, or be loaned somewhere else.
   const onLoanNow = mode === 'loan' && !!onLoan;
   $('#t-end-loan').classList.toggle('hidden', !onLoanNow);
-  $('#t-end-loan').disabled = !myClubs.length;
-  btn.textContent = { move: 'Transfer player', loan: 'Loan player', swap: 'Swap players', release: 'Release player' }[mode];
+  btn.textContent = { deal: 'Agree transfer', move: 'Move player', loan: 'Loan player', swap: 'Swap players', release: 'Release player' }[mode];
   const hints = {
-    move: "He joins the club's first team on his current contract, unless you set a new wage or end date. Some squads have no spare room in memory; then the editor says so and a swap is the way in.",
+    deal: "FM agrees the deal as if both clubs had made it: it's on his Transfer tab and in the news, and he joins on that date. The whole fee is paid that day and shows in both clubs' finances. The buying club's transfer budget drops by the fee now.",
+    move: "He joins the club's first team straight away and for free, on his current contract unless you set a new wage or end date. To pay a fee, use Transfer. Some squads have no spare room in memory; then the editor says so and a swap is the way in.",
     loan: "FM makes the loan itself, as if both clubs had agreed it: he joins the loan club's first team, stays under contract with his club and returns when the loan ends. The wage share is how much of his wage the loan club pays.",
     swap: "Each player joins the other's club on his own contract. This works even when both squads are full.",
     release: 'He leaves his club and becomes a free agent, with no contract.',
   };
   let why = '';
-  if (!myClubs.length) why = 'Pick your club first.';
-  else if (!pick.player) why = 'Pick a player.';
-  else if (mode === 'move' && !pick.club) why = 'Pick the club he moves to.';
+  if (!pick.player) why = 'Pick a player.';
+  else if ((mode === 'move' || mode === 'deal') && !pick.club) why = 'Pick the club he moves to.';
+  else if (mode === 'deal' && !$('#t-date').value) why = 'Pick when he joins.';
   else if (mode === 'loan' && !pick.club) why = 'Pick the club he goes on loan to.';
   else if (mode === 'loan' && !$('#loan-ends').value) why = 'Pick when the loan ends.';
   else if (mode === 'loan' && $('#loan-buy-if').value && !(+$('#loan-buy').value > 0)) why = 'Set the future fee the condition is for.';
@@ -708,14 +695,14 @@ function updateMove() {
 }
 
 $('#t-go').addEventListener('click', async () => {
-  const req = { player: pick.player.id, humanClubs: myClubs.map((c) => c.id) };
+  const req = { player: pick.player.id };
+  const num = (id, none) => ($(id).value === '' ? none : Math.max(0, Math.round(+$(id).value)));
+  if (mode === 'deal') Object.assign(req, { club: pick.club.id, fee: num('#t-fee', 0), date: $('#t-date').value });
   if (mode === 'move') {
     req.club = pick.club.id;
-    const num = (id) => ($(id).value === '' ? undefined : Math.max(0, Math.round(+$(id).value)));
-    req.terms = { fee: num('#t-fee'), wage: num('#t-wage'), ends: $('#t-ends').value || undefined };
+    req.terms = { wage: num('#t-wage'), ends: $('#t-ends').value || undefined };
   }
   if (mode === 'loan') {
-    const num = (id, none) => ($(id).value === '' ? none : Math.max(0, Math.round(+$(id).value)));
     Object.assign(req, { club: pick.club.id, ends: $('#loan-ends').value, wageShare: Math.min(100, num('#loan-share', 100)), monthlyFee: num('#loan-fee', 0), futureFee: num('#loan-buy', -1) });
     Object.assign(req, {
       cupMatches: $('#lc-cups').checked, againstParent: $('#lc-parent').checked, cupForParent: $('#lc-cup-parent').checked,
@@ -724,16 +711,15 @@ $('#t-go').addEventListener('click', async () => {
     });
   }
   if (mode === 'swap') req.other = pick.other.id;
-  const what = mode === 'move' ? `Transfer ${pick.player.name} to ${pick.club.name}?`
+  const what = mode === 'deal' ? `Agree ${pick.player.name}'s move to ${pick.club.name} for £${req.fee.toLocaleString('en-GB')}?`
+    : mode === 'move' ? `Move ${pick.player.name} to ${pick.club.name} now?`
     : mode === 'loan' ? `Loan ${pick.player.name} to ${pick.club.name}?`
     : mode === 'swap' ? `Swap ${pick.player.name} and ${pick.other.name}?` : `Release ${pick.player.name} from ${pick.player.club}?`;
-  const leaving = [pick.player, mode === 'swap' && pick.other].filter((p) => p && isMine(p.club));
-  const text = [$('#t-hint').textContent, ...leaving.map((p) => yourClubNote(p.name))].join(' ');
-  if (!(await ask(text, { title: what, ok: $('#t-go').textContent, danger: mode === 'release' }))) return;
+  if (!(await ask('Are you sure?', { title: what, ok: 'Confirm', danger: mode === 'release' }))) return;
   const btn = $('#t-go');
   btn.disabled = true;
   try {
-    const res = await window.api.transfer(mode, req);
+    const res = await window.api.transfer(mode === 'deal' ? 'future' : mode, req);
     toast(`${res.message}. ${status.demo ? '' : 'Reopen his profile in FM to see it.'}`);
     // A loan can't be undone here; End loan on his profile reverses it.
     if (res.canUndo === false) showLastMove(null); else showLastMove(res.message);
@@ -743,6 +729,7 @@ $('#t-go').addEventListener('click', async () => {
     resetClauses();
     $('#loan-buy-if').value = '';
     $('#loan-ends').value = mode === 'loan' ? seasonEnd() : '';
+    $('#t-date').value = mode === 'deal' ? tomorrow() : '';
     if (current && (current.id === req.player || current.id === req.other)) openPlayer(current.id);
   } catch (e) {
     toast(e.message, true);
@@ -751,10 +738,11 @@ $('#t-go').addEventListener('click', async () => {
   }
 });
 
-$('#t-end-loan').addEventListener('click', () => endLoanFromTransfers({ player: pick.player.id, humanClubs: myClubs.map((c) => c.id) }));
+['#t-date', '#t-fee'].forEach((id) => $(id).addEventListener('input', updateMove));
+$('#t-end-loan').addEventListener('click', () => endLoanFromTransfers({ player: pick.player.id }));
 async function endLoanFromTransfers(req) {
-  const name = pick.player.name, note = isMine(onLoan.at) ? ` ${yourClubNote(name)}` : '';
-  if (!(await ask(`He leaves ${onLoan.at} and goes back to ${onLoan.from || 'his club'}. You can undo it until the game moves on.${note}`, { title: `End ${name}'s loan?`, ok: 'End loan' }))) return;
+  const name = pick.player.name;
+  if (!(await ask(`He goes back to ${onLoan.from || 'his club'}. Are you sure?`, { title: `End ${name}'s loan?`, ok: 'Confirm' }))) return;
   const btn = $('#t-end-loan');
   btn.disabled = true;
   try {
@@ -782,6 +770,12 @@ $('#lc-recall').addEventListener('change', () => $('.recall-from').classList.tog
 
 // 30 June at the end of the current season (FM's usual loan end), from the game date.
 let gameToday = null;
+// The day after the game's date, as yyyy-mm-dd.
+function tomorrow() {
+  const d = gameToday ? new Date(gameToday) : new Date();
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
 function seasonEnd() {
   const d = gameToday ? new Date(gameToday) : new Date();
   return `${d.getMonth() >= 6 ? d.getFullYear() + 1 : d.getFullYear()}-06-30`;
@@ -802,7 +796,8 @@ async function refreshTransfers() {
   try {
     const t = await window.api.transferStatus();
     showLastMove(t.lastMove);
-    if (t.today) { $('#t-ends').min = $('#loan-ends').min = $('#lc-recall-from').min = t.today; gameToday = t.today; }
+    if (t.today) { $('#t-ends').min = $('#loan-ends').min = $('#lc-recall-from').min = $('#t-date').min = t.today; gameToday = t.today; }
+    if (mode === 'deal' && !$('#t-date').value) $('#t-date').value = tomorrow();
   } catch { /* the game isn't ready yet */ }
 }
 document.querySelector('[data-tab=transfers]').addEventListener('click', refreshTransfers);
@@ -831,8 +826,7 @@ document.querySelectorAll('.bg-option').forEach((b) => b.addEventListener('click
   const settings = await window.api.settings();
   applyTheme(settings.theme);
   applyBackground(settings.background);
-  myClubs = settings.myClubs || [];
-  renderMyClubs();
+  updateMove();
   $('#app-version').textContent = info.version;
   $('#demo-banner').classList.toggle('hidden', !info.demo);
   await pollStatus();
