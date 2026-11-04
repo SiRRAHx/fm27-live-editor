@@ -555,8 +555,11 @@ function renderClub() {
 $('#club-undo').addEventListener('click', () => club && renderClub());
 document.querySelectorAll('[data-squad]').forEach((b) => b.addEventListener('click', async () => {
   if (!club) return;
-  const values = b.dataset.squad === 'morale' ? { morale: 20 } : { condition: 10000, sharpness: 10000 };
-  if (!(await ask(`Every player at ${club.name} is changed.`, { title: `${b.textContent}?`, ok: b.textContent }))) return;
+  const sel = $('#squad-morale');
+  const morale = b.dataset.squad === 'morale';
+  const values = morale ? { morale: +sel.value } : { condition: 10000, sharpness: 10000 };
+  const what = morale ? `${sel.selectedOptions[0].textContent} morale` : b.textContent;
+  if (!(await ask(`Every player at ${club.name} is changed.`, { title: `${what}?`, ok: morale ? 'Set morale' : b.textContent }))) return;
   b.disabled = true;
   try {
     const res = await window.api.saveSquad(club.id, values);
