@@ -106,6 +106,7 @@ public static class Clubs
             ["id"] = id,
             ["name"] = Players.ClubName(club), ["uid"] = Players.Uid(club), ["badgeUid"] = BadgeUid(club),
             ["reputation"] = Reputation(club),
+            ["league"] = League(SeniorTeam(club)).name,
             ["founded"] = ib == null ? null : BitConverter.ToUInt16(ib, FoundedAt),
             ["status"] = Mem.Read(club + StatusAt, 1) is { } st && Statuses.ContainsKey(st[0]) ? st[0] : null,
             ["facilities"] = facilities,
@@ -224,6 +225,17 @@ public static class Clubs
             Log.Info($"Edited the finances of {Players.ClubName(club)} ({id}): {writes.Count} values");
         }
         return Get(id);
+    }
+
+    // The league a team plays in: team +0x50 -> db::COMP (+0x8 its number, +0x48 its short name,
+    // as FM's screens show it). (0, null) if it isn't there.
+    internal static (int id, string name) League(long team)
+    {
+        long comp = team == 0 ? 0 : Mem.ReadPtr(team + 0x50);
+        long mod = Mem.ModuleBase("game_plugin.dll");
+        if (comp == 0 || LoanStart.ClassOf(mod, Mem.ReadPtr(comp)) != ".?AVCOMP@db@@") return (0, null);
+        var b = Mem.Read(comp + 8, 4);
+        return b == null ? (0, null) : (BitConverter.ToInt32(b, 0), Mem.ReadLenString(Mem.ReadPtr(comp + 0x48)));
     }
 }
 

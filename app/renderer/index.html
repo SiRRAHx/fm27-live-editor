@@ -269,6 +269,12 @@
               <label>Wage share (%) <input id="loan-share" type="number" min="0" max="100" step="5" value="100" title="How much of his wage the loan club pays"></label>
               <label>Monthly fee (£) <input id="loan-fee" type="number" min="0" step="5000" placeholder="None"></label>
               <label>Future fee (£) <input id="loan-buy" type="number" min="0" step="100000" placeholder="None" title="The agreed price if the loan club wants to buy him"></label>
+              <label>Future fee due <select id="loan-buy-if" title="When the loan club has to buy him for the future fee">
+                <option value="">If the loan club wants (optional)</option>
+                <option value="win">If they win the league</option>
+                <option value="promotion">If they're promoted</option>
+                <option value="relegation">If they avoid relegation</option>
+              </select></label>
             </div>
             <div class="clauses hidden" data-modes="loan">
               <h4>Loan clauses</h4>

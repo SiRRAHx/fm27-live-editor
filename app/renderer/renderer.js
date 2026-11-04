@@ -561,7 +561,7 @@ const myPicker = picker($('#my-club-pick'), 'Search for your club', (q) => windo
 });
 const pickers = {
   player: picker($('#t-player'), 'Search for a player', (q) => window.api.search(q), playerLabel, (p) => { pick.player = p; checkOnLoan(); updateMove(); }),
-  club: picker($('#t-club'), 'Search for a club', (q) => window.api.searchClubs(q), clubLabel, (c) => { pick.club = c; updateMove(); }),
+  club: picker($('#t-club'), 'Search for a club', (q) => window.api.searchClubs(q), clubLabel, (c) => { pick.club = c; showLeague(c); updateMove(); }),
   other: picker($('#t-other'), 'Search for the other player', (q) => window.api.search(q), playerLabel, (p) => { pick.other = p; updateMove(); }),
 };
 
@@ -573,6 +573,18 @@ document.querySelectorAll('#move-tabs .type-tab').forEach((b) => b.addEventListe
   if (mode === 'loan' && !$('#loan-ends').value) $('#loan-ends').value = seasonEnd();
   updateMove();
 }));
+
+// The future fee's conditions are about the loan club's own league, so they're named after it.
+const FEE_IF = { win: (l) => `If they win the ${l}`, promotion: (l) => `If they're promoted from the ${l}`, relegation: (l) => `If they avoid relegation from the ${l}` };
+async function showLeague(club) {
+  let league = null;
+  try { if (club) league = (await window.api.club(club.id)).league; } catch { /* generic names stay */ }
+  if (pick.club !== club) return;
+  for (const o of $('#loan-buy-if').options) {
+    if (!o.value) continue;
+    o.textContent = FEE_IF[o.value](league || 'league');
+  }
+}
 
 // On the Loan tab, a player who is already out on loan gets an End loan button instead.
 let onLoan = null;
@@ -618,6 +630,7 @@ function updateMove() {
   else if (mode === 'move' && !pick.club) why = 'Pick the club he moves to.';
   else if (mode === 'loan' && !pick.club) why = 'Pick the club he goes on loan to.';
   else if (mode === 'loan' && !$('#loan-ends').value) why = 'Pick when the loan ends.';
+  else if (mode === 'loan' && $('#loan-buy-if').value && !(+$('#loan-buy').value > 0)) why = 'Set the future fee the condition is for.';
   else if (mode === 'swap' && !pick.other) why = 'Pick the player to swap with.';
   btn.disabled = !!why;
   $('#t-hint').textContent = why ? `${why} ${hints[mode]}` : hints[mode];
@@ -636,6 +649,7 @@ $('#t-go').addEventListener('click', async () => {
     Object.assign(req, { club: pick.club.id, ends: $('#loan-ends').value, wageShare: Math.min(100, num('#loan-share', 100)), monthlyFee: num('#loan-fee', 0), futureFee: num('#loan-buy', -1) });
     Object.assign(req, {
       cupMatches: $('#lc-cups').checked, againstParent: $('#lc-parent').checked, cupForParent: $('#lc-cup-parent').checked,
+      futureFeeIf: $('#loan-buy-if').value || undefined,
       cannotTerminate: $('#lc-fixed').checked, recall: $('#lc-recall').checked, recallFrom: $('#lc-recall').checked ? $('#lc-recall-from').value || undefined : undefined,
     });
   }
@@ -657,6 +671,7 @@ $('#t-go').addEventListener('click', async () => {
     ['#t-fee', '#t-wage', '#t-ends', '#loan-fee', '#loan-buy'].forEach((id) => { $(id).value = ''; });
     $('#loan-share').value = 100;
     resetClauses();
+    $('#loan-buy-if').value = '';
     $('#loan-ends').value = mode === 'loan' ? seasonEnd() : '';
     if (current && (current.id === req.player || current.id === req.other)) openPlayer(current.id);
   } catch (e) {
@@ -691,6 +706,7 @@ function resetClauses() {
   $('#lc-recall-from').value = '';
   $('.recall-from').classList.add('hidden');
 }
+['#loan-buy', '#loan-buy-if'].forEach((id) => $(id).addEventListener('input', updateMove));
 $('#lc-recall').addEventListener('change', () => $('.recall-from').classList.toggle('hidden', !$('#lc-recall').checked));
 
 // 30 June at the end of the current season (FM's usual loan end), from the game date.

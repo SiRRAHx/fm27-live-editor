@@ -117,3 +117,17 @@ Form flags (+0x50) -> loan contract bits (+0xB0), checked by making loans and re
 - 0x20000000 came with a future fee tied to a condition (Danso: "Avoiding relegation from the Premier
   League"), but Balerdi's conditional fee ("Qualifying for the Champions League") has no such bit; the
   condition is stored elsewhere. 0x8, 0x8000, 0x40000000, 0x80000000 aren't shown on that screen.
+
+## 4 Nov: future fee conditions
+Loan form -> loan contract, checked on FM's Loan Club screen with test loans:
+- form +0x48 byte -> loan +0x9C: what has to happen. 14 or 0 "Winning the [league]" (Broja 14; tests
+  Lacey 0, Mantato 14), 3 "Promotion from the [league]" (Mainoo to Swansea), 6 "Avoiding relegation
+  from the [league]" (Kukonki, Heaton), 9 "Qualifying for the [comp]" with the comp itself (Nunez, 637 =
+  Champions League), 10 qualifying through the league (Balerdi: +0xC4 Serie A, +0x90 637). 255 = none
+  (an optional future fee).
+- form +0x3C -> loan +0xC4: the competition's number (db::COMP +0x8). A team's league: team +0x50 ->
+  db::COMP; its short name (as FM shows it) at COMP +0x48 ("EFL League One"). Wigan 9, Swansea 8 (EFL
+  Championship), Man Utd 7 (Premier League).
+- form +0x40 -> loan +0x94 and form +0x44 -> loan +0x98: not shown on that screen (12 and 15 tried);
+  probably the minimum games / stage FM's language file mentions, not used yet.
+The editor offers win / promotion / avoid relegation, always in the loan club's own league.

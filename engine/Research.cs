@@ -44,17 +44,52 @@ public static class Research
         if (what == "club" && method == "GET") return Clubs.Find(Arg("id", 0)).ToString("X");
         // Every loan in the career grouped by its clause bits (loan +0xB0), with a few examples each,
         // to match the bits to FM's loan screen.
+        // The objects a club's first team points at: offset, class, and their first bytes.
+        if (what == "team-refs" && method == "GET")
+        {
+            long mod = Mem.ModuleBase("game_plugin.dll");
+            long team = Clubs.SeniorTeam(Clubs.Find(int.Parse(args["club"])));
+            var b = Mem.Read(team, 0x800);
+            var list = new List<object>();
+            for (int o = 0; b != null && o + 8 <= b.Length; o += 8)
+            {
+                long ptr = BitConverter.ToInt64(b, o);
+                if (ptr < 0x10000 || ptr > 0x7FFFFFFFFFFF) continue;
+                long vt = Mem.ReadPtr(ptr);
+                if (vt < mod || vt > mod + 0x20000000) continue;
+                string cls = LoanStart.ClassOf(mod, vt);
+                if (cls == null) continue;
+                var head = Mem.Read(ptr, 0x60);
+                var texts = new List<string>();
+                if (cls == ".?AVCOMP@db@@")
+                    for (int k = 0x10; k < 0x200; k += 8)
+                        if (Mem.ReadLenString(Mem.ReadPtr(ptr + k)) is { Length: > 1 and < 80 } t) texts.Add($"+0x{k:X} {t}");
+                list.Add(new { at = $"0x{o:X}", cls, ptr = $"0x{ptr:X}", head = head == null ? null : Convert.ToHexString(head), texts });
+            }
+            return list;
+        }
         if (what == "loans" && method == "GET")
         {
+            // ?ids=1,2: the whole loan contracts of these players, as hex.
+            if (args.TryGetValue("ids", out var ids))
+                return ids.Split(',').Select(int.Parse).Select(id =>
+                {
+                    long pp = Players.Find(id), ln = pp == 0 ? 0 : Loans.Find(pp);
+                    var all = ln == 0 ? null : Mem.Read(ln, 0x180);
+                    return new { id, name = pp == 0 ? null : Players.Summary(pp)?.name, loan = $"0x{ln:X}", raw = all == null ? null : Convert.ToHexString(all) };
+                }).ToList();
             var groups = new Dictionary<string, (int n, List<object> ex)>();
             foreach (var (id, p) in Players.All())
             {
                 long loan = Loans.Find(p);
                 var b = loan == 0 ? null : Mem.Read(loan, 0x100);
                 if (b == null) continue;
-                string key = $"0x{BitConverter.ToUInt32(b, 0xB0):X}";
+                // ?by=cond: loans with a future fee, by the condition number next to it (+0xC4).
+                bool byCond = args.TryGetValue("by", out var by) && by == "cond";
+                if (byCond && BitConverter.ToInt32(b, 0xC0) <= 0) continue;
+                string key = byCond ? BitConverter.ToInt32(b, 0xC4).ToString() : $"0x{BitConverter.ToUInt32(b, 0xB0):X}";
                 if (!groups.TryGetValue(key, out var g)) g = (0, new List<object>());
-                if (g.ex.Count < 4)
+                if (g.ex.Count < (byCond ? 10 : 4))
                     g.ex.Add(new
                     {
                         id, name = Players.Summary(p)?.name, at = Players.TeamClub(BitConverter.ToInt64(b, 0x10)),

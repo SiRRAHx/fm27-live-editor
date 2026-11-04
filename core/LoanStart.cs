@@ -29,6 +29,7 @@ public static class LoanStart
         public int wageShare { get; set; } = 100; // % of his wage the loan club pays
         public int monthlyFee { get; set; }
         public int futureFee { get; set; } = -1;  // agreed price to buy him, -1 for none
+        public string futureFeeIf { get; set; }   // due only if the loan club: "win", "promotion" or "relegation" (avoids it) in its league
         // Loan clauses, as FM's contract screen names them.
         public bool againstParent { get; set; }     // can play against own team
         public bool cupMatches { get; set; } = true; // can play in cup matches
@@ -37,18 +38,23 @@ public static class LoanStart
         public bool recall { get; set; }            // can be recalled
         public string recallFrom { get; set; }      // ...from this date (yyyy-MM-dd), or any time if empty
         public long rawFlags { get; set; } = -1;    // research only: form flags as they are
+        public System.Collections.Generic.Dictionary<string, string> patch { get; set; } // research only: form offset (hex) -> bytes (hex)
     }
 
     // The form's clause flags (+0x50), checked against FM's contract screen on 4 Nov. FM adds
     // "cannot play against parent club in cup matches" (0x100 on the loan) by itself.
     const long AgainstParent = 0x1, CupMatches = 0x2, Recall = 0x4, CannotTerminate = 0x1000, CupForParent = 0x100000;
     const int FlagsAt = 0x50;
+    // A future fee's condition: the competition (+0x3C) and what has to happen in it (+0x48), as on
+    // FM's own loans (Broja: winning League One 14, Zappa: promotion 3, Danso: avoiding relegation 6).
+    const int FeeCompAt = 0x3C, FeeIfAt = 0x48;
+    static readonly System.Collections.Generic.Dictionary<string, byte> FeeIf = new() { ["win"] = 14, ["promotion"] = 3, ["relegation"] = 6 };
 
     // An FM date with no flags: day of the year, then the year.
     static byte[] Date(DateTime d) => new[] { (byte)(d.DayOfYear & 0xFF), (byte)(d.DayOfYear >> 8), (byte)(d.Year & 0xFF), (byte)(d.Year >> 8) };
 
     // The class name MSVC records for the vtable at this address (".?AVNAME@db@@").
-    static string ClassOf(long mod, long vt)
+    internal static string ClassOf(long mod, long vt)
     {
         long col = Mem.ReadPtr(vt - 8);
         var b = col == 0 ? null : Mem.Read(col + 12, 4);
@@ -84,6 +90,14 @@ public static class LoanStart
         if (req.wageShare < 0 || req.wageShare > 100) throw new EditorError("The wage share must be between 0% and 100%.", 400);
         if (req.monthlyFee < 0 || req.monthlyFee > 2_000_000_000) throw new EditorError("The monthly fee must be between 0 and 2,000,000,000.", 400);
         if (req.futureFee < -1 || req.futureFee > 2_000_000_000) throw new EditorError("The future fee must be between 0 and 2,000,000,000, or none.", 400);
+        int feeComp = 0;
+        if (!string.IsNullOrEmpty(req.futureFeeIf))
+        {
+            if (!FeeIf.ContainsKey(req.futureFeeIf)) throw new EditorError("Unknown future fee condition.", 400);
+            if (req.futureFee <= 0) throw new EditorError("Set a future fee for the condition to apply to.", 400);
+            feeComp = Clubs.League(team).id;
+            if (feeComp <= 0) throw new EditorError("Couldn't find the loan club's league, so the condition can't be set.", 409);
+        }
         DateTime recallFrom = default;
         if (req.recall && !string.IsNullOrEmpty(req.recallFrom) && (!DateTime.TryParseExact(req.recallFrom, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out recallFrom)
             || recallFrom < today || recallFrom >= ends))
@@ -112,6 +126,9 @@ public static class LoanStart
         if (req.rawFlags >= 0 && Research.On) flags = req.rawFlags;
         BitConverter.GetBytes(flags).CopyTo(f, FlagsAt);
         if (recallFrom != default) Date(recallFrom).CopyTo(f, OtherDateAt);
+        if (feeComp > 0) { BitConverter.GetBytes(feeComp).CopyTo(f, FeeCompAt); f[FeeIfAt] = FeeIf[req.futureFeeIf]; }
+        if (req.patch != null && Research.On)
+            foreach (var (at, hex) in req.patch) Convert.FromHexString(hex).CopyTo(f, Convert.ToInt32(at, 16));
 
         Backup.EnsureBackedUp();
         Log.Info($"Starting a loan: player 0x{p:X} to team 0x{team:X} until {req.ends}, clauses 0x{flags:X}");
