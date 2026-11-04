@@ -41,9 +41,14 @@ Function FmDirPage
   ${If} $FmDir == ""
     Call FmGuess
   ${EndIf}
+  ; The page header (the UI library's header macro isn't loaded yet where this file is included).
+  GetDlgItem $0 $HWNDPARENT 1037
+  SendMessage $0 ${WM_SETTEXT} 0 "STR:Where is Football Manager 27?"
+  GetDlgItem $0 $HWNDPARENT 1038
+  SendMessage $0 ${WM_SETTEXT} 0 "STR:Pick the folder that has fm.exe in it."
   nsDialogs::Create 1018
   Pop $0
-  ${NSD_CreateLabel} 0 0 100% 64u "Where is Football Manager 27? Pick the folder that has fm.exe in it. The editor needs this to set up its optional in-game button. Usual places:$\r$\n$\r$\n  Steam:  Steam > steamapps > common > Football Manager 27$\r$\n  Epic:  Epic Games > Football Manager 27$\r$\n  Game Pass:  XboxGames > Football Manager 27 > Content$\r$\n$\r$\nIn Steam: right-click FM27 > Manage > Browse local files. In the Xbox app: FM27 > Manage > Files > Browse."
+  ${NSD_CreateLabel} 0 0 100% 64u "The editor needs this to set up its optional in-game button. Usual places:$\r$\n$\r$\n  Steam:  Steam > steamapps > common > Football Manager 27$\r$\n  Epic:  Epic Games > Football Manager 27$\r$\n  Game Pass:  XboxGames > Football Manager 27 > Content$\r$\n$\r$\nIn Steam: right-click FM27 > Manage > Browse local files. In the Xbox app: FM27 > Manage > Files > Browse."
   Pop $0
   ${NSD_CreateText} 0 72u 78% 12u "$FmDir"
   Pop $FmDirInput
