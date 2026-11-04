@@ -237,7 +237,7 @@
 
       <!-- Transfers -->
       <section id="tab-transfers" class="panel hidden">
-        <div class="page-head"><div><div class="eyebrow">Transfers</div><h1>Move players between clubs</h1><p class="sub">Move a player to another club, swap two players, or release a player. The change is instant and your save is backed up first.</p></div></div>
+        <div class="page-head"><div><div class="eyebrow">Transfers</div><h1>Move players between clubs</h1><p class="sub">Transfer or loan a player to another club, swap two players, or release a player. The change is instant and your save is backed up first.</p></div></div>
         <div id="transfers-offline" class="empty">
           <h2>Start FM27 and load your career</h2>
           <p>Transfers work once the editor has found the players in your game.</p>
@@ -250,7 +250,7 @@
             <div class="picker-box" id="my-club-pick"></div>
           </div>
           <div class="type-tabs" id="move-tabs">
-            <button class="type-tab active" data-mode="move">Move</button>
+            <button class="type-tab active" data-mode="move">Transfer</button>
             <button class="type-tab" data-mode="loan">Loan</button>
             <button class="type-tab" data-mode="swap">Swap</button>
             <button class="type-tab" data-mode="release">Release</button>
@@ -270,8 +270,17 @@
               <label>Monthly fee (£) <input id="loan-fee" type="number" min="0" step="5000" placeholder="None"></label>
               <label>Future fee (£) <input id="loan-buy" type="number" min="0" step="100000" placeholder="None" title="The agreed price if the loan club wants to buy him"></label>
             </div>
+            <div class="clauses hidden" data-modes="loan">
+              <h4>Loan clauses</h4>
+              <label class="clause"><input type="checkbox" class="toggle" id="lc-cups" checked> Can play in cup matches</label>
+              <label class="clause"><input type="checkbox" class="toggle" id="lc-parent"> Can play against own team</label>
+              <label class="clause"><input type="checkbox" class="toggle" id="lc-cup-parent"> Can play for parent club in cup matches</label>
+              <label class="clause"><input type="checkbox" class="toggle" id="lc-fixed"> Loan cannot be terminated</label>
+              <label class="clause"><input type="checkbox" class="toggle" id="lc-recall"> Can be recalled
+                <span class="recall-from hidden">from <input id="lc-recall-from" type="date" min="2000-01-01" max="2100-12-31" title="Leave empty to allow a recall any time"></span></label>
+            </div>
             <p class="card-note" id="t-hint"></p>
-            <div class="card-actions"><button id="t-go" class="btn primary" disabled>Move player</button></div>
+            <div class="card-actions"><button id="t-go" class="btn primary" disabled>Transfer player</button></div>
           </div>
           <div id="last-move" class="attr-card transfer-card hidden">
             <h3>Last change</h3>

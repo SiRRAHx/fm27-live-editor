@@ -106,11 +106,20 @@ img.logo { background: none; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.28); bo
 .transfer-card { display: flex; flex-direction: column; gap: 12px; }
 .transfer-card > .field, .transfer-card .terms label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
 .transfer-card .terms { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.transfer-card .clauses { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px; }
+.transfer-card .clauses h4 { grid-column: 1 / -1; margin: 4px 0 0; font-size: 12px; font-weight: 600; color: var(--muted); }
+.transfer-card .clause input.toggle { width: 42px; padding: 0; }
+.transfer-card .clause input[type=date] { width: auto; font-size: 13px; padding: 4px 8px; }
+.transfer-card .clause { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; flex-wrap: wrap; }
+.transfer-card .recall-from { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.transfer-card .recall-from.hidden { display: none; }
 .transfer-card input { font-size: 15px; font-weight: 600; padding: 8px 10px; width: 100%; }
 .picker-box { position: relative; display: block; }
 .pick-results { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); max-height: 260px; overflow-y: auto;
   display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 10px; background: var(--panel, #0c1a16); border: 1px solid var(--line-2); box-shadow: 0 12px 30px rgba(0,0,0,.45); }
 .pick-results:empty { display: none; }
+/* A card with an open result list sits above the cards after it (their blur makes layers of their own). */
+.attr-card:has(.pick-results:not(:empty)) { position: relative; z-index: 30; }
 .picked { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(var(--accent-rgb), 0.45); background: rgba(var(--accent-rgb), 0.08); color: var(--text, #fff); }
 .picked b { flex: 1; font-size: 14px; } .picked small { color: var(--faint); font-size: 12px; }
 .picked button { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; }
@@ -121,4 +130,4 @@ img.logo { background: none; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.28); bo
 .squad-card { margin-top: 16px; }
 .club-actions { margin-top: 12px; }
 .squad-card .card-actions { justify-content: flex-start; flex-wrap: wrap; }
-@media (max-width: 760px) { .transfer-card .terms { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .transfer-card .terms, .transfer-card .clauses { grid-template-columns: 1fr; } }

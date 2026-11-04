@@ -351,6 +351,9 @@ public static class Players
         };
     }
 
+    // Research only (see Research.cs): every player's id and address.
+    internal static List<(int id, long p)> All() { lock (gate) return byId.Select(kv => (kv.Key, kv.Value)).ToList(); }
+
     // Research only (see Research.cs): the raw bytes around a spread of players.
     public static List<Dictionary<string, object>> Dump(int n, int from, int len)
     {

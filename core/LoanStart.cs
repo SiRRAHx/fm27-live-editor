@@ -29,7 +29,20 @@ public static class LoanStart
         public int wageShare { get; set; } = 100; // % of his wage the loan club pays
         public int monthlyFee { get; set; }
         public int futureFee { get; set; } = -1;  // agreed price to buy him, -1 for none
+        // Loan clauses, as FM's contract screen names them.
+        public bool againstParent { get; set; }     // can play against own team
+        public bool cupMatches { get; set; } = true; // can play in cup matches
+        public bool cupForParent { get; set; }      // can play for parent club in cup matches
+        public bool cannotTerminate { get; set; }   // loan cannot be terminated
+        public bool recall { get; set; }            // can be recalled
+        public string recallFrom { get; set; }      // ...from this date (yyyy-MM-dd), or any time if empty
+        public long rawFlags { get; set; } = -1;    // research only: form flags as they are
     }
+
+    // The form's clause flags (+0x50), checked against FM's contract screen on 4 Nov. FM adds
+    // "cannot play against parent club in cup matches" (0x100 on the loan) by itself.
+    const long AgainstParent = 0x1, CupMatches = 0x2, Recall = 0x4, CannotTerminate = 0x1000, CupForParent = 0x100000;
+    const int FlagsAt = 0x50;
 
     // An FM date with no flags: day of the year, then the year.
     static byte[] Date(DateTime d) => new[] { (byte)(d.DayOfYear & 0xFF), (byte)(d.DayOfYear >> 8), (byte)(d.Year & 0xFF), (byte)(d.Year >> 8) };
@@ -71,6 +84,10 @@ public static class LoanStart
         if (req.wageShare < 0 || req.wageShare > 100) throw new EditorError("The wage share must be between 0% and 100%.", 400);
         if (req.monthlyFee < 0 || req.monthlyFee > 2_000_000_000) throw new EditorError("The monthly fee must be between 0 and 2,000,000,000.", 400);
         if (req.futureFee < -1 || req.futureFee > 2_000_000_000) throw new EditorError("The future fee must be between 0 and 2,000,000,000, or none.", 400);
+        DateTime recallFrom = default;
+        if (req.recall && !string.IsNullOrEmpty(req.recallFrom) && (!DateTime.TryParseExact(req.recallFrom, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out recallFrom)
+            || recallFrom < today || recallFrom >= ends))
+            throw new EditorError("The recall date must be from today and before the loan ends.", 400);
         long manager = Mem.ReadPtr(Addresses.Game);
         if (manager == 0) throw new EditorError("FM isn't ready to make loans yet.", 503);
 
@@ -90,9 +107,14 @@ public static class LoanStart
         BitConverter.GetBytes(req.monthlyFee).CopyTo(f, MonthlyFeeAt);
         BitConverter.GetBytes(req.futureFee).CopyTo(f, FutureFeeAt);
         BitConverter.GetBytes((short)req.wageShare).CopyTo(f, WageShareAt);
+        long flags = (req.againstParent ? AgainstParent : 0) | (req.cupMatches ? CupMatches : 0)
+            | (req.cupForParent ? CupForParent : 0) | (req.cannotTerminate ? CannotTerminate : 0) | (req.recall ? Recall : 0);
+        if (req.rawFlags >= 0 && Research.On) flags = req.rawFlags;
+        BitConverter.GetBytes(flags).CopyTo(f, FlagsAt);
+        if (recallFrom != default) Date(recallFrom).CopyTo(f, OtherDateAt);
 
         Backup.EnsureBackedUp();
-        Log.Info($"Starting a loan: player 0x{p:X} to team 0x{team:X} until {req.ends}");
+        Log.Info($"Starting a loan: player 0x{p:X} to team 0x{team:X} until {req.ends}, clauses 0x{flags:X}");
         // FM runs its own start-loan function on a short-lived thread of its own (Mem.CallInGame),
         // with the form copied into its memory: start-loan(manager, form, 1).
         var stub = new byte[]

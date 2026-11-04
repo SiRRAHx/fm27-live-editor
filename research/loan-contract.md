@@ -103,3 +103,17 @@ Before each call it checks the STARTING_LOAN and ACTUAL_PLAYER class names and t
 75% → £2,625 of £3,500); monthly and future fee come through; FM also copies the monthly fee into the
 "unused fee". wageShare -1 gives a £0 loan wage on this path. End loan works on these loans.
 Still to do: clause tick boxes (+0x50 bits, names not matched yet); re-loaning a player already on loan.
+
+## 4 Nov: loan clauses matched to FM's contract screen (Loan Club tab)
+Form flags (+0x50) -> loan contract bits (+0xB0), checked by making loans and reading FM's screen:
+- 0x1 "Can play against own team" (loan 0x1)
+- 0x2 "Can play in cup matches" (0x2)
+- 0x4 "Can be recalled" (0x4); form +0x38 = recall-from date -> loan +0xF0 (1900-01-01 = any time,
+  as on FM's own loans such as Balde's). FM greys out "Recall From Loan" on a loan started that day.
+- 0x1000 "Loan cannot be terminated" (0x1000)
+- 0x100000 "Can play for parent club in cup matches" (0x100000)
+- FM adds 0x100 "Cannot play against parent club in cup matches" by itself (Heaven: form 0x2 -> 0x102;
+  seen on loans between clubs in the same country).
+- 0x20000000 came with a future fee tied to a condition (Danso: "Avoiding relegation from the Premier
+  League"), but Balerdi's conditional fee ("Qualifying for the Champions League") has no such bit; the
+  condition is stored elsewhere. 0x8, 0x8000, 0x40000000, 0x80000000 aren't shown on that screen.

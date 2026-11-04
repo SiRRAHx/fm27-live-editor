@@ -42,6 +42,30 @@ public static class Research
         if (what == "person" && method == "GET") return Players.Find(Arg("id", 0)).ToString("X");
         if (what == "module" && method == "GET") return Mem.ModuleBase("game_plugin.dll").ToString("X");
         if (what == "club" && method == "GET") return Clubs.Find(Arg("id", 0)).ToString("X");
+        // Every loan in the career grouped by its clause bits (loan +0xB0), with a few examples each,
+        // to match the bits to FM's loan screen.
+        if (what == "loans" && method == "GET")
+        {
+            var groups = new Dictionary<string, (int n, List<object> ex)>();
+            foreach (var (id, p) in Players.All())
+            {
+                long loan = Loans.Find(p);
+                var b = loan == 0 ? null : Mem.Read(loan, 0x100);
+                if (b == null) continue;
+                string key = $"0x{BitConverter.ToUInt32(b, 0xB0):X}";
+                if (!groups.TryGetValue(key, out var g)) g = (0, new List<object>());
+                if (g.ex.Count < 4)
+                    g.ex.Add(new
+                    {
+                        id, name = Players.Summary(p)?.name, at = Players.TeamClub(BitConverter.ToInt64(b, 0x10)),
+                        future = BitConverter.ToInt32(b, 0xC0), buyBack = BitConverter.ToInt32(b, 0xC8),
+                        monthly = BitConverter.ToInt32(b, 0xCC), recallFrom = Players.Date(b, 0xF0),
+                        raw = Convert.ToHexString(b, 0xA0, 0x60),
+                    });
+                groups[key] = (g.n + 1, g.ex);
+            }
+            return groups.OrderByDescending(kv => kv.Value.n).Select(kv => new { bits = kv.Key, count = kv.Value.n, examples = kv.Value.ex }).ToList();
+        }
         throw new EditorError("Not found.", 404);
     }
 }
