@@ -695,6 +695,51 @@ document.querySelectorAll('.bg-option').forEach((b) => b.addEventListener('click
   setInterval(pollStatus, 3000);
 })();
 
+// --- App updates ---
+// The app checks on start and from "Check for app updates", asks before downloading,
+// shows progress in a banner, then offers to restart.
+let appUpdateAsked = null; // the state we last asked about, so we ask once
+async function showAppUpdate(u) {
+  const box = $('#app-update');
+  box.classList.add('hidden');
+  if (u?.state === 'available') {
+    if (u.error) toast(u.error, true);
+    if (appUpdateAsked === 'available:' + u.version) return;
+    appUpdateAsked = 'available:' + u.version;
+    if (await ask(`Version ${u.version} of FM27 Live Editor is available (you have ${u.current}). Download and install it?`,
+      { title: 'App update available', ok: 'Download update' })) window.api.downloadAppUpdate();
+  } else if (u?.state === 'downloading') {
+    $('#app-update-text').textContent = `Downloading the app update… ${Math.round((u.pct || 0) * 100)}%`;
+    $('#app-update-restart').classList.add('hidden');
+    box.classList.remove('hidden');
+  } else if (u?.state === 'ready') {
+    $('#app-update-text').textContent = `Version ${u.version} is ready to install.`;
+    $('#app-update-restart').classList.remove('hidden');
+    box.classList.remove('hidden');
+    if (appUpdateAsked === 'ready:' + u.version) return;
+    appUpdateAsked = 'ready:' + u.version;
+    if (await ask(`Version ${u.version} is ready. Restart now to install it, or it installs the next time you close the editor.`,
+      { title: 'Update downloaded', ok: 'Restart now' })) window.api.restartToUpdate();
+  }
+}
+window.api.onAppUpdate(showAppUpdate);
+window.api.appInfo().then((i) => {
+  if (!i.autoUpdates) $('#check-app-update').classList.add('hidden');
+  if (i.update) showAppUpdate(i.update);
+});
+$('#app-update-restart').addEventListener('click', () => window.api.restartToUpdate());
+$('#check-app-update').addEventListener('click', async () => {
+  const btn = $('#check-app-update');
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  appUpdateAsked = null; // a manual check always asks again
+  const r = await window.api.checkAppUpdate();
+  btn.disabled = false;
+  btn.textContent = 'Check for app updates';
+  if (r.state === 'none') toast("You're on the latest version.");
+  else if (r.state === 'error') toast(r.message, true);
+});
+
 // --- In-game button (Settings) ---
 async function renderAddon(promise) {
   const state = $('#addon-state'), actions = $('#addon-actions');

@@ -6,6 +6,7 @@ const { pathToFileURL } = require('url');
 const graphics = require('./src/graphics');
 const store = require('./src/store');
 const addon = require('./src/addon');
+const { setupSelfUpdate } = require('./src/selfupdate');
 const { GROUPS, POSITIONS, SQUAD_STATUSES, label } = require('./src/attributes');
 
 // --demo uses made-up players, so the window can be tried without FM27.
@@ -136,5 +137,6 @@ app.whenReady().then(() => {
   if (!demo) startEngine();
   if (!demo) graphics.load();
   createWindow();
+  setupSelfUpdate((channel, data) => win && !win.isDestroyed() && win.webContents.send(channel, data));
 });
 app.on('window-all-closed', () => app.quit());

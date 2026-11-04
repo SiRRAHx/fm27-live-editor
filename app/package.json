@@ -8,7 +8,8 @@
   "scripts": {
     "start": "electron .",
     "demo": "electron . --demo",
-    "dist": "electron-builder --win nsis"
+    "dist": "electron-builder --win nsis",
+    "release": "node scripts/ensure-release.js && electron-builder --win nsis --publish always"
   },
   "devDependencies": {
     "electron": "^38.2.0",
@@ -65,7 +66,17 @@
       "uninstallDisplayName": "FM27 Live Editor",
       "include": "build/installer.nsh"
     },
-    "publish": null
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "SiRRAHx",
+        "repo": "fm27-live-editor",
+        "releaseType": "prerelease"
+      }
+    ]
   },
-  "repository": "https://github.com/SiRRAHx/fm27-live-editor"
+  "repository": "https://github.com/SiRRAHx/fm27-live-editor",
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  }
 }

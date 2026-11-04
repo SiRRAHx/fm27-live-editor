@@ -19,4 +19,9 @@ contextBridge.exposeInMainWorld('api', {
   addonInstall: (folder) => ipcRenderer.invoke('addon-install', folder),
   addonOn: (on) => ipcRenderer.invoke('addon-on', on),
   addonRemove: () => ipcRenderer.invoke('addon-remove'),
+  appInfo: () => ipcRenderer.invoke('app-info'),
+  checkAppUpdate: () => ipcRenderer.invoke('check-app-update'),
+  downloadAppUpdate: () => ipcRenderer.invoke('download-app-update'),
+  restartToUpdate: () => ipcRenderer.invoke('restart-to-update'),
+  onAppUpdate: (fn) => ipcRenderer.on('app-update', (_e, data) => fn(data)),
 });

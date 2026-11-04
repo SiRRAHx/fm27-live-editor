@@ -1,0 +1,12 @@
+{
+  "0.3.1": [
+    "The installer asks where FM27 is (the folder with fm.exe), with where Steam, Epic and Game Pass keep it",
+    "The editor now updates itself: it checks when it starts and asks before downloading",
+    "Fixes the missing logo in the installed app"
+  ],
+  "0.3.0": [
+    "First early-access release: the editor runs on its own, outside FM",
+    "Loan any player to any club with an end date, wage share, monthly fee and future fee",
+    "Optional in-game button, set up from Settings"
+  ]
+}
