@@ -1,6 +1,6 @@
 # FM27 Live Editor
 
-A free live editor for **Football Manager 27**, made for the Game Pass version. Change players, clubs and
+A free live editor for **Football Manager 27**. Change players, clubs and
 transfers in the career you have loaded, while FM is running.
 
 > **Early access.** This is a test build. Back up your saves (the editor does this too, before your first
@@ -31,14 +31,22 @@ there and FM starts as normal; the editor keeps working.
 ## Install
 
 1. Download `FM27-Live-Editor-Setup-<version>.exe` from [Releases](../../releases) and run it.
-2. Start FM27 and load your career. The editor connects by itself.
+2. The installer asks where FM27 is (the folder with `fm.exe`). It usually finds it by itself; otherwise:
+   - Steam: Steam > steamapps > common > Football Manager 27
+   - Epic: Epic Games > Football Manager 27
+   - Game Pass: XboxGames > Football Manager 27 > Content
+3. Start FM27 and load your career. The editor connects by itself.
 
 Windows may warn that the installer isn't signed: choose **More info → Run anyway**.
 
 ## Supported versions
 
-FM27 on Game Pass / Microsoft Store, game version of 2 Nov 2026. After an FM update the editor checks
-what it knows and switches off anything that no longer matches, rather than guessing.
+- **Game Pass / Microsoft Store:** tested, game version of 2 Nov 2026.
+- **Steam and Epic:** support is being added. Until then the editor tells you your FM27 build isn't
+  supported yet and changes nothing.
+
+After an FM update the editor checks what it knows and switches off anything that no longer matches,
+rather than guessing.
 
 ## Building
 
