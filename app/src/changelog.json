@@ -1,6 +1,6 @@
 {
-  "0.3.3": [
-    "Updating from inside the editor no longer goes through the installer again: it keeps your settings and folder, installs quietly and opens the editor again"
+  "0.3.4": [
+    "Updates from inside the editor now happen in the background: no installer to click through, same settings and folder, and the editor opens again by itself"
   ],
   "0.3.2": [
     "Works with Steam and Epic as well as Game Pass: the editor finds what it needs in whichever FM27 build you run, instead of only the Game Pass one",

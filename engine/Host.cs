@@ -4,7 +4,7 @@ namespace FM27LiveEditor;
 
 public static class Host
 {
-    public const string Version = "0.3.3";
+    public const string Version = "0.3.4";
     static int checkedPid;
     static bool? editing;
     public static string Reason = "Start FM27 and load a save.";

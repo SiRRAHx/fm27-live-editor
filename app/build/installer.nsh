@@ -86,9 +86,31 @@ Function FmDirPageLeave
   ${EndIf}
 FunctionEnd
 
+; An update started from inside the app (--updated) shows no installer at all: same folder,
+; same settings. Editors from 0.3.4 on also pass --force-run, so the installer opens the editor
+; again; older ones don't, so in that case it's opened here.
+!macro preInit
+  ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "--updated" $1
+  ${IfNot} ${Errors}
+    SetSilent silent
+  ${EndIf}
+!macroend
+
 !macro customInstall
   ${If} $FmDir != ""
     WriteRegStr HKCU "Software\FM27 Live Editor" "GameFolder" "$FmDir"
+  ${EndIf}
+  ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "--updated" $1
+  ${IfNot} ${Errors}
+    ClearErrors
+    ${GetOptions} $0 "--force-run" $1
+    ${If} ${Errors}
+      Exec '"$INSTDIR\${APP_EXECUTABLE_FILENAME}"'
+    ${EndIf}
   ${EndIf}
 !macroend
 !endif
