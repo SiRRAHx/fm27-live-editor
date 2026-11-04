@@ -41,12 +41,12 @@ Windows may warn that the installer isn't signed: choose **More info → Run any
 
 ## Supported versions
 
-- **Game Pass / Microsoft Store:** tested, game version of 2 Nov 2026.
-- **Steam and Epic:** support is being added. Until then the editor tells you your FM27 build isn't
-  supported yet and changes nothing.
+- **Game Pass / Microsoft Store:** tested.
+- **Steam and Epic:** supported, not yet confirmed by a tester.
 
-After an FM update the editor checks what it knows and switches off anything that no longer matches,
-rather than guessing.
+The editor doesn't depend on one build of FM27: when FM starts, it finds what it needs in the game
+itself. If it can't find something for sure (say, after a big FM update), editing stays off and the
+log at `%LOCALAPPDATA%\FM27 Live Editor\engine.log` says what's missing; please attach it to an Issue.
 
 ## Building
 

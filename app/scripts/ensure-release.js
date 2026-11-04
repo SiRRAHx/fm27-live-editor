@@ -28,8 +28,8 @@ function releaseNotes(v = version) {
     'Already have 0.3.1 or later? The editor offers this update itself when it starts.',
     '',
     '## Supported',
-    '- Game Pass / Microsoft Store: tested (game version of 2 Nov 2026).',
-    "- Steam and Epic: support is being added. Until then the editor says your FM27 build isn't supported yet and changes nothing.",
+    '- Game Pass / Microsoft Store: tested.',
+    "- Steam and Epic: supported, not yet confirmed by a tester. If the editor says your FM27 build isn't supported, please open an Issue and attach `%LOCALAPPDATA%\\FM27 Live Editor\\engine.log`.",
     '',
     'Edits are kept only if you save in FM.',
   ].join('\n');
