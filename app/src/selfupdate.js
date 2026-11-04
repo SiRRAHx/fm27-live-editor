@@ -58,7 +58,8 @@ function setupSelfUpdate(send) {
     autoUpdater.downloadUpdate().catch(() => {}); // failures arrive as 'error' above
   });
   ipcMain.handle('restart-to-update', () => {
-    if (state.state === 'ready') autoUpdater.quitAndInstall();
+    // Silently, with the same install folder and settings, then the editor opens again.
+    if (state.state === 'ready') autoUpdater.quitAndInstall(true, true);
   });
 
   // Check once the app has started; the window asks if there's an update.

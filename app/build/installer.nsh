@@ -4,6 +4,7 @@
 !ifndef BUILD_UNINSTALLER
 !include nsDialogs.nsh
 !include LogicLib.nsh
+!include FileFunc.nsh
 
 Var FmDir
 Var FmDirInput
@@ -38,6 +39,13 @@ Function FmGuess
 FunctionEnd
 
 Function FmDirPage
+  ; An update from inside the app (--updated) keeps the folder already set, so skip the page.
+  ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "--updated" $1
+  ${IfNot} ${Errors}
+    Abort
+  ${EndIf}
   ${If} $FmDir == ""
     Call FmGuess
   ${EndIf}
