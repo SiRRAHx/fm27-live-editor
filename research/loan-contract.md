@@ -139,3 +139,24 @@ The editor offers win / promotion / avoid relegation, always in the loan club's 
   (day-of-year word, year word). No nation in it.
 - P - 0x160: NATIONAL_TEAM of the squad he's in now (about 1 in 10 players; ~20 per team).
 - NATIONAL_TEAM records are 0x108 long: +0x8 id, +0x88 captain, +0x90 vice-captain.
+
+## Club debts and sponsorships (4 Nov 2026, Man Utd in the Test save)
+
+Debts: club info (club + 0x100) + 0x50 is a vector of pointers to 0x1C-byte debt records:
++0x0 amount borrowed, +0x4 monthly repayment, +0x8 interest part of each repayment, +0xC 0,
++0x10 end date, +0x14 start date (repayments start), +0x18 flags (0x0101 / 0x07000101 seen).
+FM's "remaining" is monthly x months left, and "interest" is the +0x8 part x months left.
+Man Utd: 415,000,000 / 8,017,000 / 983,102, 2026-06-10 to 2031-06-10; 169,755,008 / 2,986,401;
+200,000,000 / 5,534,745 from 2026-10-01 to 2029-12-31. The vector was full (end == capacity).
+STARTING_CLUB_DEBT (0x68, factory at rva 0xd40700, added to its table by 0xd40950) is only the
+new-game form; no live objects of that class exist in a running career.
+
+Sponsorships: club + 0x130 points to a block whose first field is a vector of pointers to 0x18-byte
+deal records: +0x0 start date, +0x4 end date, +0x8 total value, +0xC per season, +0x10 club
+reputation when signed (high word), +0x14 type: 0x116 kit manufacturer, 0x101 main kit, 0x113 shirt
+sleeve, 0x10D training kit, 4 / 0x104 / 6 general partners. Expired deals stay in the list.
+The records sit in one big array for all clubs; the per-club vector only points into it.
+
+Scouting budget: not in the club, club info, finances or senior team. "Adjust Scouting Budget"
+changes only the transfer budget at finances + 0x7C4 there; the scouting figure was only found
+in UI copies (SCOUTING_INFO_UI_HANDLER + 0x264, next to the season's starting figure).

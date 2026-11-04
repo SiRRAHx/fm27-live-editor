@@ -45,6 +45,29 @@ public static class Research
         // Every loan in the career grouped by its clause bits (loan +0xB0), with a few examples each,
         // to match the bits to FM's loan screen.
         // The objects a club's first team points at: offset, class, and their first bytes.
+        if (what == "find" && method == "GET")
+        {
+            // ?hex=bytes: every place in FM's heap holding them (up to ?max=).
+            var pat = Convert.FromHexString(args["hex"]);
+            int max = Arg("max", 200);
+            var hits = new List<string>();
+            foreach (var (start, size) in Mem.HeapRegions())
+            {
+                for (long o = 0; o < size && hits.Count < max; o += 1 << 22)
+                {
+                    var b = Mem.Read(start + o, (int)Math.Min((1 << 22) + pat.Length - 1, size - o));
+                    if (b == null) continue;
+                    for (int i = b.AsSpan().IndexOf(pat); i >= 0 && hits.Count < max; )
+                    {
+                        hits.Add((start + o + i).ToString("X"));
+                        int n = b.AsSpan(i + 1).IndexOf(pat);
+                        i = n < 0 ? -1 : i + 1 + n;
+                    }
+                }
+                if (hits.Count >= max) break;
+            }
+            return hits;
+        }
         if (what == "team-refs" && method == "GET")
         {
             long mod = Mem.ModuleBase("game_plugin.dll");
