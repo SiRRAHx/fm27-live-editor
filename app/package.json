@@ -61,7 +61,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "FM27 Live Editor",
-      "uninstallDisplayName": "FM27 Live Editor"
+      "uninstallDisplayName": "FM27 Live Editor",
+      "include": "build/installer.nsh"
     },
     "publish": null
   },

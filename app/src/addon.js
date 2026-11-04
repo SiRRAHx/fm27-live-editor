@@ -22,18 +22,37 @@ function runningFm() {
   });
 }
 
-// Where FM27 is: the folder picked before, the running game, or the usual Game Pass and Steam places.
+const realDir = (dir) => { try { return fs.realpathSync.native(dir); } catch { return dir; } };
+
+// The folder picked in the installer, if any. It's taken over once (and removed from the registry),
+// so a folder picked later in Settings isn't overridden.
+function adoptInstallerChoice() {
+  const key = 'HKCU\\Software\\FM27 Live Editor';
+  return new Promise((resolve) => {
+    execFile('reg', ['query', key, '/v', 'GameFolder'], { windowsHide: true, timeout: 8000 }, (err, out) => {
+      const m = !err && /GameFolder\s+REG_SZ\s+(.+)/.exec(out);
+      if (!m) return resolve();
+      const dir = realDir(m[1].trim());
+      if (isGame(dir)) store.saveSettings({ gameFolder: dir });
+      execFile('reg', ['delete', key, '/v', 'GameFolder', '/f'], { windowsHide: true }, () => resolve());
+    });
+  });
+}
+
+// Where FM27 is: the folder picked before, the running game, or the usual Game Pass, Steam and Epic places.
 async function findGame() {
+  await adoptInstallerChoice();
   const saved = store.getSettings().gameFolder;
   if (isGame(saved)) return saved;
   const running = await runningFm();
   if (running && isGame(path.dirname(running))) {
     // Game Pass runs FM from a link under WindowsApps; the real (writable) folder is where it points.
-    try { return fs.realpathSync.native(path.dirname(running)); } catch { return path.dirname(running); }
+    return realDir(path.dirname(running));
   }
   for (const drive of 'CDEFGHIJ') {
     for (const dir of ['XboxGames\\Football Manager 27\\Content', 'Games\\Football Manager 27\\Content',
-      'Program Files (x86)\\Steam\\steamapps\\common\\Football Manager 27', 'SteamLibrary\\steamapps\\common\\Football Manager 27']) {
+      'Program Files (x86)\\Steam\\steamapps\\common\\Football Manager 27', 'SteamLibrary\\steamapps\\common\\Football Manager 27',
+      'Program Files\\Epic Games\\Football Manager 27', 'Epic Games\\Football Manager 27']) {
       const full = `${drive}:\\${dir}`;
       if (isGame(full)) return full;
     }
