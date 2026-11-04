@@ -201,8 +201,14 @@ public static class Players
     internal static bool IsTeam(long team) => team != 0 && Mem.ReadPtr(team) == teamVt;
     // The name of the club a team belongs to, or null.
     internal static string TeamClub(long team) => IsTeam(team) && Mem.ReadPtr(team + 0x30) is var club && IsClub(club) ? ClubName(club) : null;
-    // Every club seen while indexing players, with its name.
-    internal static List<(long club, string name)> KnownClubs() { lock (clubNames) return clubNames.Where(kv => kv.Value != null).Select(kv => (kv.Key, kv.Value)).ToList(); }
+    // Every club seen while indexing players, with its name. An index run (the regular recheck
+    // too) starts the list again, so this waits for one that's under way rather than answer
+    // with half the clubs.
+    internal static List<(long club, string name)> KnownClubs()
+    {
+        for (int i = 0; i < 100 && Indexing; i++) Thread.Sleep(100);
+        lock (clubNames) return clubNames.Where(kv => kv.Value != null).Select(kv => (kv.Key, kv.Value)).ToList();
+    }
     // Club + 0xB9 is 1 for a women's club: set on all 1,243 women's sides in
     // the Test save (e.g. Manchester United 26574) and on no men's club.
     // FM's unique ID (the one graphics packs name files by) is at +0xC on both people
