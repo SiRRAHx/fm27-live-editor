@@ -1,4 +1,16 @@
 {
+  "0.3.5": [
+    "Agree a transfer through FM: pick the fee and the day he joins. FM makes the deal like any other, the fee is paid that day and shows in both clubs' finances, and the buying club's transfer budget drops by the fee",
+    "Move now moves a player straight away, for free",
+    "Loans can have FM's loan clauses (cup matches, playing against his own club, recall, can't be ended early) and a future fee that only applies if the club wins the league, is promoted or avoids relegation",
+    "Edit an existing loan's clauses and future fee from his profile, end a loan from the Loan tab, and loan out a player who is already on loan",
+    "Change a player's nationality",
+    "The Clubs page is in tabs and shows the club's bank loans and sponsorship deals",
+    "Set a club's owner (early: FM keeps the owner you pick, but decides itself when the owner pays in)",
+    "Whole squad: pick the morale level",
+    "Dropdowns and number arrows match the app's look",
+    "My clubs is no longer in Settings"
+  ],
   "0.3.4": [
     "Updates from inside the editor now happen in the background: no installer to click through, same settings and folder, and the editor opens again by itself"
   ],
