@@ -113,8 +113,13 @@ module.exports = {
       return { ok: true, message: text, canUndo: true };
     }
     if (action === 'loan') {
-      if (p.loan) throw new Error("He's already on loan. End that loan first.");
       const to = clubs.find((c) => c.id === req.club);
+      if (p.loan) {
+        if (to.name === p.loan.club) throw new Error('He already plays for that club.');
+        if (to.name === p.contract.club) throw new Error("That's his own club. Use End loan to send him back.");
+        p.club = p.contract.club;
+        p.loan = null;
+      }
       if (to.name === p.club) throw new Error('He already plays for that club.');
       const wage = Math.round(p.contract.wage * req.wageShare / 100);
       p.loan = { club: to.name, wage, starts: '2026-09-09', ends: req.ends, monthlyFee: req.monthlyFee || null, unusedFee: null, futureFee: req.futureFee >= 0 ? req.futureFee : null };

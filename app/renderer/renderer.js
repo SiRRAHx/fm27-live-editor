@@ -631,11 +631,11 @@ const yourClubNote = (name) => `${name} is at your club: FM takes him out of you
 
 function updateMove() {
   const btn = $('#t-go');
-  const ending = mode === 'loan' && !!onLoan;
-  btn.textContent = ending ? 'End loan' : { move: 'Transfer player', loan: 'Loan player', swap: 'Swap players', release: 'Release player' }[mode];
-  document.querySelectorAll('#transfers-ui [data-modes~="loan"]').forEach((el) => {
-    if (mode === 'loan') el.classList.toggle('hidden', ending);
-  });
+  // A player already out on loan can have that loan ended, or be loaned somewhere else.
+  const onLoanNow = mode === 'loan' && !!onLoan;
+  $('#t-end-loan').classList.toggle('hidden', !onLoanNow);
+  $('#t-end-loan').disabled = !myClubs.length;
+  btn.textContent = { move: 'Transfer player', loan: 'Loan player', swap: 'Swap players', release: 'Release player' }[mode];
   const hints = {
     move: "He joins the club's first team on his current contract, unless you set a new wage or end date. Some squads have no spare room in memory; then the editor says so and a swap is the way in.",
     loan: "FM makes the loan itself, as if both clubs had agreed it: he joins the loan club's first team, stays under contract with his club and returns when the loan ends. The wage share is how much of his wage the loan club pays.",
@@ -643,13 +643,6 @@ function updateMove() {
     release: 'He leaves his club and becomes a free agent, with no contract.',
   };
   let why = '';
-  if (ending) {
-    btn.disabled = !myClubs.length;
-    $('#t-hint').textContent = myClubs.length
-      ? `${pick.player.name} is already on loan at ${onLoan.at}. Ending it sends him back to ${onLoan.from || 'his club'}; you can undo it until the game moves on.`
-      : 'Pick your club first.';
-    return;
-  }
   if (!myClubs.length) why = 'Pick your club first.';
   else if (!pick.player) why = 'Pick a player.';
   else if (mode === 'move' && !pick.club) why = 'Pick the club he moves to.';
@@ -658,12 +651,12 @@ function updateMove() {
   else if (mode === 'loan' && $('#loan-buy-if').value && !(+$('#loan-buy').value > 0)) why = 'Set the future fee the condition is for.';
   else if (mode === 'swap' && !pick.other) why = 'Pick the player to swap with.';
   btn.disabled = !!why;
-  $('#t-hint').textContent = why ? `${why} ${hints[mode]}` : hints[mode];
+  const loanNote = onLoanNow ? `${pick.player.name} is on loan at ${onLoan.at}. End loan sends him back to ${onLoan.from || 'his club'}; loaning him elsewhere ends that loan first.` : '';
+  $('#t-hint').textContent = [loanNote, why, loanNote ? '' : hints[mode]].filter(Boolean).join(' ');
 }
 
 $('#t-go').addEventListener('click', async () => {
   const req = { player: pick.player.id, humanClubs: myClubs.map((c) => c.id) };
-  if (mode === 'loan' && onLoan) return endLoanFromTransfers(req);
   if (mode === 'move') {
     req.club = pick.club.id;
     const num = (id) => ($(id).value === '' ? undefined : Math.max(0, Math.round(+$(id).value)));
@@ -706,10 +699,11 @@ $('#t-go').addEventListener('click', async () => {
   }
 });
 
+$('#t-end-loan').addEventListener('click', () => endLoanFromTransfers({ player: pick.player.id, humanClubs: myClubs.map((c) => c.id) }));
 async function endLoanFromTransfers(req) {
   const name = pick.player.name, note = isMine(onLoan.at) ? ` ${yourClubNote(name)}` : '';
   if (!(await ask(`He leaves ${onLoan.at} and goes back to ${onLoan.from || 'his club'}. You can undo it until the game moves on.${note}`, { title: `End ${name}'s loan?`, ok: 'End loan' }))) return;
-  const btn = $('#t-go');
+  const btn = $('#t-end-loan');
   btn.disabled = true;
   try {
     const res = await window.api.transfer('end-loan', req);

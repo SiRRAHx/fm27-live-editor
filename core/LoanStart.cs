@@ -19,7 +19,7 @@ public static class LoanStart
     const int Size = 0x70;
     const int PersonAt = 0x18, LoanTeamAt = 0x20, StartsAt = 0x30, EndsAt = 0x34, OtherDateAt = 0x38;
     const int MonthlyFeeAt = 0x5C, FutureFeeAt = 0x60, WageShareAt = 0x6C;
-    const int TeamAt = -0x158;
+    const int TeamAt = -0x158, ContractEmployerAt = 0x10;
 
     public class Request
     {
@@ -77,12 +77,17 @@ public static class LoanStart
         CheckBuild(mod);
         long p = Players.Find(req.player);
         if (Mem.ReadPtr(p) != Addresses.Person) throw new EditorError("Only players can be loaned.", 409);
-        if (Loans.Find(p) != 0) throw new EditorError("He's already on loan. End that loan first.", 409);
         long current = Mem.ReadPtr(p + TeamAt);
         if (!Players.IsTeam(current)) throw new EditorError("He has no club to be loaned from.", 409);
         long club = Clubs.Find(req.club), team = Clubs.SeniorTeam(club);
         if (team == 0 || Mem.Read(team + 0x2F, 1)?[0] != 0) throw new EditorError("Couldn't find that club's first team.", 409);
         if (current == team || Mem.ReadPtr(current + 0x30) == club) throw new EditorError("He already plays for that club.", 409);
+        // Already on loan: his current loan is ended first (he goes back to his parent club), once
+        // everything below has been checked. Loaning him back to his own club is just ending it.
+        bool reloan = Loans.Find(p) != 0;
+        string oldClub = reloan ? Players.TeamClub(current) : null;
+        if (reloan && Players.Contract(p) is var c && c != 0 && Mem.ReadPtr(Mem.ReadPtr(c + ContractEmployerAt) + 0x30) == club)
+            throw new EditorError("That's his own club. Use End loan to send him back.", 409);
         var today = Transfers.Today() ?? throw new EditorError("Couldn't read the game date.", 500);
         if (!DateTime.TryParseExact(req.ends, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var ends) || ends <= today)
             throw new EditorError("The loan must end after today.", 400);
@@ -131,6 +136,11 @@ public static class LoanStart
             foreach (var (at, hex) in req.patch) Convert.FromHexString(hex).CopyTo(f, Convert.ToInt32(at, 16));
 
         Backup.EnsureBackedUp();
+        if (reloan)
+        {
+            Transfers.EndLoan(new MoveRequest { player = req.player });
+            if (Loans.Find(p) != 0) throw new EditorError("His current loan couldn't be ended, so nothing else was changed.", 500);
+        }
         Log.Info($"Starting a loan: player 0x{p:X} to team 0x{team:X} until {req.ends}, clauses 0x{flags:X}");
         // FM runs its own start-loan function on a short-lived thread of its own (Mem.CallInGame),
         // with the form copied into its memory: start-loan(manager, form, 1).
@@ -156,6 +166,7 @@ public static class LoanStart
         string name = Players.Summary(p)?.name ?? "The player", to = Players.TeamClub(team) ?? "the new club";
         if (Loans.Find(p) == 0) throw new EditorError($"FM didn't start the loan. {name} is still at his club.", 500);
         Log.Info($"Loaned {name} to {to}");
-        return new { ok = true, message = $"Loaned {name} to {to} until {ends:d MMM yyyy}", canUndo = false };
+        string ended = reloan ? $" (his loan at {oldClub} ended)" : "";
+        return new { ok = true, message = $"Loaned {name} to {to} until {ends:d MMM yyyy}{ended}", canUndo = false };
     }
 }
