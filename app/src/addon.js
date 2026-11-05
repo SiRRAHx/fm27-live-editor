@@ -116,4 +116,15 @@ async function remove() {
   return status();
 }
 
-module.exports = { status, install, setOn, remove, isGame };
+// After an editor update: an installed button that's older than this copy's is replaced, so
+// the in-game side keeps up. Only our DLL, and only while FM is closed (it's in use otherwise).
+async function refresh() {
+  try {
+    const a = await status();
+    if (!a.installed || a.fmRunning || !fs.existsSync(addonDll())) return;
+    const plugin = path.join(a.folder, 'BepInEx', 'plugins', 'FM27LiveEditor.dll');
+    if (!fs.readFileSync(plugin).equals(fs.readFileSync(addonDll()))) fs.copyFileSync(addonDll(), plugin);
+  } catch (e) { console.error("Couldn't update the in-game button:", e); }
+}
+
+module.exports = { status, install, setOn, remove, refresh, isGame };

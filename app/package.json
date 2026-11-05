@@ -1,6 +1,6 @@
 {
   "name": "fm27-live-editor",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Free live editor for Football Manager 27",
   "main": "main.js",
   "author": "Liam Harris",

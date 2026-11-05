@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('api', {
   settings: () => ipcRenderer.invoke('settings'),
   saveSettings: (patch) => ipcRenderer.invoke('save-settings', patch),
   whatsNew: () => ipcRenderer.invoke('whats-new'),
+  openAt: () => ipcRenderer.invoke('open-at'),
+  onOpenAt: (fn) => ipcRenderer.on('open-at', (_e, at) => fn(at)),
   status: () => ipcRenderer.invoke('status'),
   search: (q) => ipcRenderer.invoke('search', q),
   player: (id) => ipcRenderer.invoke('player', id),

@@ -101,7 +101,23 @@ app.on('second-instance', () => {
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
+  const at = openAt();
+  if (at) win.webContents.send('open-at', at);
 });
+
+// What FM was showing when its pencil was clicked ({ kind: 'person' or 'club', id }): the
+// plugin writes open-at.json next to the shortcut just before opening it. Only a fresh
+// one counts, once.
+let openAtSeen = 0;
+function openAt() {
+  try {
+    const at = JSON.parse(fs.readFileSync(path.join(app.getPath('documents'), 'FM27 Live Editor', 'open-at.json'), 'utf8'));
+    if (!(at.at > openAtSeen) || Date.now() - at.at > 20000) return null;
+    openAtSeen = at.at;
+    return at.open && ['person', 'club'].includes(at.open.kind) && Number.isInteger(at.open.id) ? at.open : null;
+  } catch { return null; }
+}
+ipcMain.handle('open-at', () => (demo ? null : openAt()));
 
 // Faces and badges: fmimg://person/<uid> and fmimg://club/<uid>, using FM's
 // unique IDs. They come from the player's graphics packs; without one, a
@@ -139,6 +155,7 @@ app.whenReady().then(() => {
   protocol.handle('fmimg', image);
   if (!demo) startEngine();
   if (!demo) graphics.load();
+  if (!demo && app.isPackaged) addon.refresh();
   createWindow();
   setupSelfUpdate((channel, data) => win && !win.isDestroyed() && win.webContents.send(channel, data));
 });

@@ -21,6 +21,7 @@
     <Reference Include="$(FM27Dir)\BepInEx\interop\FM.GamePlugin.dll" Private="false" />
     <Reference Include="$(FM27Dir)\BepInEx\interop\SI.Marshalling.dll" Private="false" />
     <Reference Include="$(FM27Dir)\BepInEx\interop\SI.Bindable.dll" Private="false" />
+    <Reference Include="$(FM27Dir)\BepInEx\interop\FM.UI.dll" Private="false" />
     <Reference Include="$(FM27Dir)\BepInEx\interop\SI.Core.dll" Private="false" />
     <Reference Include="$(FM27Dir)\BepInEx\interop\UnityEngine.UIElementsModule.dll" Private="false" />
     <Reference Include="$(FM27Dir)\BepInEx\interop\UnityEngine.TextRenderingModule.dll" Private="false" />

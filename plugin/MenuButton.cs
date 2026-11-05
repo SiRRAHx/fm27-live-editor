@@ -28,7 +28,7 @@ public class MenuButton : MonoBehaviour
     float next = 5f;
     int failures, iconFailures;
     float nextIcon = 5f;
-    SI.Bindable.PanelManager panels;
+    static SI.Bindable.PanelManager panels;
     static Texture2D logo;
 
     void Update()
@@ -102,8 +102,100 @@ public class MenuButton : MonoBehaviour
         var tex = Pencil();
         if (tex != null) icon.style.backgroundImage = new StyleBackground(tex);
         b.Add(icon);
-        b.add_clicked((Il2CppSystem.Action)(System.Action)(() => Open(null)));
+        b.add_clicked((Il2CppSystem.Action)(System.Action)(() => { Here(); Open(null); }));
         return b;
+    }
+
+    public static string HereFile => Path.Combine(Path.GetDirectoryName(Shortcut), "open-at.json");
+    static FM.UI.PanelHistoryManager history;
+    // FM's reference types, and the property holding a reference's database record: the
+    // table in the top byte, and below it the record's ID, the same ID the editor uses.
+    const uint PersonRef = 1145176065, ClubRef = 1145176067, RecordField = 1685218662;
+
+    // What's on screen, for the app to open on: the person or club of the latest open screen
+    // in FM's own screen history (what its back button uses), or on a screen without one (the
+    // Portal), the manager's club.
+    static void Here()
+    {
+        string json = "null";
+        try
+        {
+            history ??= FindObjectOfType<FM.Game.FMInitialiser>()?.m_panelHistoryManager?.PanelHistoryManager;
+            var subject = Subject() ?? HumanClub();
+            int id = Record(subject) & 0xFFFFFF;
+            if (id != 0) json = $"{{\"kind\":\"{(subject.ID.ID == PersonRef ? "person" : "club")}\",\"id\":{id}}}";
+        }
+        catch (Exception e) { Plugin.Logger.LogWarning("pencil: couldn't tell what's on screen: " + e.Message); }
+        try
+        {
+            File.WriteAllText(HereFile + ".tmp", $"{{\"at\":{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},\"open\":{json}}}");
+            File.Copy(HereFile + ".tmp", HereFile, true);
+            File.Delete(HereFile + ".tmp");
+        }
+        catch (Exception e) { Plugin.Logger.LogWarning("pencil: couldn't write " + HereFile + ": " + e.Message); }
+    }
+
+    static SI.Interop.InteropReference AsRef(SI.Core.TypedValue v)
+    {
+        try { return v?.Get()?.TryCast<SI.Interop.InteropReference>(); } catch { return null; }
+    }
+
+    static int Record(SI.Interop.InteropReference r)
+    {
+        if (r?.m_id != null) foreach (var p in r.m_id) if (p.ID == RecordField) return p.Value;
+        return 0;
+    }
+
+    // The latest open screen's person, or failing that its club.
+    static SI.Interop.InteropReference Subject()
+    {
+        var nodes = history?.m_history;
+        if (nodes == null) return null;
+        for (int i = nodes.Count - 1; i >= 0; i--)
+        {
+            var node = nodes[i];
+            bool open;
+            try { open = node != null && node.IsOpen(); } catch { open = false; }
+            if (!open || node.m_arguments == null) continue;
+            SI.Interop.InteropReference club = null;
+            foreach (var arg in node.m_arguments)
+            {
+                var r = AsRef(arg.Value);
+                if (r == null) continue;
+                if (r.ID.ID == PersonRef) return r;
+                if (r.ID.ID == ClubRef) club ??= r;
+            }
+            if (club != null) return club;
+        }
+        return null;
+    }
+
+    static SI.Bindable.IReadOnlyNode Child(SI.Bindable.IReadOnlyNode n, string name)
+    {
+        for (var c = n?.FirstChild; c != null; c = c.NextSibling) if (c.Name == name) return c;
+        return null;
+    }
+
+    // The manager's club, as the top bar has it in its screen data (Human > Team > Club).
+    static SI.Interop.InteropReference HumanClub()
+    {
+        var bindings = SI.Core.GameSubsystems.GetOptional<SI.Bindable.Bindings>();
+        if (bindings == null || panels == null) return null;
+        var open = new Il2CppSystem.Collections.Generic.List<SI.Bindable.Panel>();
+        panels.GetAllOpenPanels(open);
+        var stack = new System.Collections.Generic.Stack<SI.Bindable.IReadOnlyNode>();
+        foreach (var panel in open)
+        {
+            var key = panel.Key;
+            if (bindings.TryGetNode(ref key, out var node) && node != null) stack.Push(node);
+        }
+        for (int seen = 0; stack.Count > 0 && seen < 50000; seen++)
+        {
+            var n = stack.Pop();
+            if (n.Name == "Human" && AsRef(Child(Child(n, "Team"), "Club")?.Value) is { } club && club.ID.ID == ClubRef) return club;
+            for (var c = n.FirstChild; c != null; c = c.NextSibling) stack.Push(c);
+        }
+        return null;
     }
 
     // Research only: logs the elements around the Search label, to place the icon.

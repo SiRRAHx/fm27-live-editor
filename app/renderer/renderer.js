@@ -917,6 +917,20 @@ async function showWhatsNew() {
   $('#whats-new-dialog').showModal();
 }
 
+// --- Opening on what FM shows (the in-game pencil) ---
+// The player or club FM had on screen. On a fresh start the engine is still finding the
+// players, so this keeps trying for a while.
+async function openOn(at) {
+  if (!at) return;
+  const club = at.kind === 'club';
+  for (let tries = 0; tries < 60; tries++) {
+    try { await (club ? window.api.club(at.id) : window.api.player(at.id)); } catch { await new Promise((r) => setTimeout(r, 1000)); continue; }
+    document.querySelector(`.nav[data-tab=${club ? 'clubs' : 'players'}]`).click();
+    return club ? openClub(at.id) : openPlayer(at.id);
+  }
+}
+window.api.onOpenAt(openOn);
+
 (async () => {
   info = await window.api.info();
   const settings = await window.api.settings();
@@ -926,6 +940,7 @@ async function showWhatsNew() {
   $('#app-version').textContent = info.version;
   $('#demo-banner').classList.toggle('hidden', !info.demo);
   showWhatsNew();
+  window.api.openAt().then(openOn);
   await pollStatus();
   setInterval(pollStatus, 3000);
 })();

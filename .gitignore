@@ -27,3 +27,6 @@ vendor/bepinex/
 # raw game logs and memory diffs (can hold local paths and save names)
 research/*-calls-*.txt
 research/*-diff.txt
+
+# What FM showed when its in-game pencil was clicked
+open-at.json

@@ -1,4 +1,8 @@
 {
+  "0.3.8": [
+    "The in-game pencil opens the editor on what FM is showing: a player's profile opens that player, a club's page opens that club, and the Portal opens your club",
+    "The in-game button updates itself when the editor updates (with FM closed)"
+  ],
   "0.3.7": [
     "Date boxes open a calendar: click through the years and months, then pick the day"
   ],
