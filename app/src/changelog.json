@@ -1,4 +1,9 @@
 {
+  "0.3.10": [
+    "Whole squad can remove every ban at the club",
+    "Bank balance and transfer budget go up to 1 billion, and ability fields show their 1–200 range",
+    "Dropdown lists match the editor's dark style"
+  ],
   "0.3.9": [
     "What's new shows every version you missed, also when updating from before 0.3.6"
   ],

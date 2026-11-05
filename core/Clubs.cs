@@ -162,16 +162,25 @@ public static class Clubs
         return found.ToList();
     }
 
-    // Sets morale, condition or sharpness for the whole club. Returns how many players changed.
+    // Sets morale, condition or sharpness for the whole club, or ("bans") lifts every ban.
+    // Returns how many players changed.
     public static int SetSquad(int id, Dictionary<string, int> values)
     {
         long club = Find(id);
-        var allowed = new[] { "morale", "condition", "sharpness" };
-        if (values.Keys.Any(k => !allowed.Contains(k))) throw new EditorError("Only morale, condition and sharpness can be set for a whole squad.", 400);
+        var allowed = new[] { "morale", "condition", "sharpness", "bans" };
+        if (values.Keys.Any(k => !allowed.Contains(k))) throw new EditorError("Only morale, condition, sharpness and bans can be set for a whole squad.", 400);
         var players = Players_(club);
         if (players.Count == 0) throw new EditorError("Couldn't find this club's players.", 400);
         Backup.EnsureBackedUp();
-        int changed = players.Count(p => Players.WriteStatus(p, values) > 0);
+        bool bans = values.Remove("bans");
+        int changed = players.Count(p =>
+        {
+            int n = values.Count > 0 ? Players.WriteStatus(p, values) : 0;
+            // One player the game is changing right now doesn't stop the rest.
+            if (bans) try { n += Health.LiftBans(p); } catch (EditorError e) { Log.Info($"Bans at 0x{p:X} left: {e.Message}"); }
+            return n > 0;
+        });
+        if (bans) values["bans"] = 0;
         Log.Info($"Set {string.Join(", ", values.Keys)} for {changed} of {players.Count} players at {Players.ClubName(club)}");
         return changed;
     }
@@ -181,15 +190,16 @@ public static class Clubs
         long club = Find(id);
         long f = Finances(club);
         var writes = new List<(int at, int value)>();
-        void Add(int? v, int at, string name, int min)
+        void Add(int? v, int at, string name, int min, int max)
         {
             if (v == null) return;
-            if (v < min || v > 2_000_000_000) throw new EditorError($"{name} must be between {min:N0} and 2,000,000,000.", 400);
+            if (v < min || v > max) throw new EditorError($"{name} must be between {min:N0} and {max:N0}.", 400);
             writes.Add((at, v.Value));
         }
-        Add(changes.balance, BalanceAt, "Balance", -2_000_000_000);
-        Add(changes.transferBudget, TransferBudgetAt, "Transfer budget", 0);
-        Add(changes.wageBudget, WageBudgetAt, "Wage budget", 0);
+        // FM keeps the balance and transfer budget within a billion.
+        Add(changes.balance, BalanceAt, "Balance", -1_000_000_000, 1_000_000_000);
+        Add(changes.transferBudget, TransferBudgetAt, "Transfer budget", 0, 1_000_000_000);
+        Add(changes.wageBudget, WageBudgetAt, "Wage budget", 0, 2_000_000_000);
 
         // Reputation and facilities: checked first, written after the finances.
         var other = new List<(long at, byte[] value)>();

@@ -90,8 +90,8 @@
                   <div class="row-desc" id="p-sub"></div>
                 </div>
                 <div class="ability">
-                  <label>Current ability <input id="p-ca" type="number" min="1" max="200"></label>
-                  <label>Potential ability <input id="p-pa" type="number" min="1" max="200"></label>
+                  <label>Current ability (1–200) <input id="p-ca" type="number" min="1" max="200"></label>
+                  <label>Potential ability (1–200) <input id="p-pa" type="number" min="1" max="200"></label>
                 </div>
               </div>
               <div class="type-tabs editor-tabs">
@@ -215,8 +215,8 @@
               <div id="club-pane-finances" class="club-pane contract-cards">
                 <div id="finance-form" class="attr-card contract-card">
                   <h3>Finances</h3>
-                  <label>Bank balance (£) <input id="f-balance" type="number" step="100000"></label>
-                  <label>Transfer budget (£) <input id="f-transferBudget" type="number" min="0" step="100000"></label>
+                  <label>Bank balance (£, max 1 billion) <input id="f-balance" type="number" min="-1000000000" max="1000000000" step="100000"></label>
+                  <label>Transfer budget (£, max 1 billion) <input id="f-transferBudget" type="number" min="0" max="1000000000" step="100000"></label>
                   <label>Wage budget per week (£) <input id="f-wageBudget" type="number" min="0" step="1000"></label>
                   <p class="card-note" id="f-wages"></p>
                   <label><span>Owner <span class="early" title="Still being tested">Early</span></span> <select id="f-owner"><option value="0">None</option><option value="1">Sugar daddy: spends big</option><option value="2">Sugar daddy: now and then</option><option value="3">Covers losses</option><option value="4">Covers losses, wants it back</option></select></label>                </div>
@@ -246,6 +246,7 @@
                   <div class="card-actions">
                     <button class="btn" data-squad="morale">Set morale</button>
                     <button class="btn" data-squad="fitness">Full fitness and sharpness</button>
+                    <button class="btn" data-squad="bans">Remove all bans</button>
                   </div>
                 </div>
               </div>

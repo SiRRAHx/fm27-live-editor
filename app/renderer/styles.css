@@ -304,6 +304,19 @@ select {
 select:disabled { cursor: default; opacity: 0.55; }
 select option { background: var(--bg-2); color: var(--text); }
 select option:checked { background: var(--accent-2); color: var(--accent-ink); }
+/* The open list too, instead of Windows' white-edged one. */
+@supports (appearance: base-select) {
+  select, ::picker(select) { appearance: base-select; }
+  select::picker-icon { display: none; }
+  ::picker(select) {
+    background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 10px;
+    padding: 4px; margin-top: 4px; box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
+  }
+  select option { padding: 7px 10px; border-radius: 7px; background: transparent; cursor: pointer; }
+  select option::checkmark { display: none; }
+  select option:hover, select option:focus-visible { background: rgba(var(--accent-rgb), 0.14); outline: none; }
+  select option:checked { background: rgba(var(--accent-rgb), 0.24); color: var(--text); font-weight: 600; }
+}
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none; appearance: none; cursor: pointer;
   width: 14px; height: 22px; margin-left: 6px; opacity: 0.6;

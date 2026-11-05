@@ -551,7 +551,9 @@ function renderClub() {
     input.value = f[k];
     input.parentElement.classList.remove('changed');
     input.onchange = () => {
-      input.value = Math.round(Math.min(2e9, Math.max(k === 'balance' ? -2e9 : 0, +input.value || 0)));
+      // FM keeps the balance and transfer budget within a billion; the wage budget can go higher.
+      const max = k === 'wageBudget' ? 2e9 : 1e9;
+      input.value = Math.round(Math.min(max, Math.max(k === 'balance' ? -max : 0, +input.value || 0)));
       input.parentElement.classList.toggle('changed', +input.value !== f[k]);
     };
   }
@@ -562,7 +564,7 @@ document.querySelectorAll('[data-squad]').forEach((b) => b.addEventListener('cli
   if (!club) return;
   const sel = $('#squad-morale');
   const morale = b.dataset.squad === 'morale';
-  const values = morale ? { morale: +sel.value } : { condition: 10000, sharpness: 10000 };
+  const values = morale ? { morale: +sel.value } : b.dataset.squad === 'bans' ? { bans: 1 } : { condition: 10000, sharpness: 10000 };
   const what = morale ? `${sel.selectedOptions[0].textContent} morale` : b.textContent;
   if (!(await ask(`Every player at ${club.name} is changed.`, { title: `${what}?`, ok: morale ? 'Set morale' : b.textContent }))) return;
   b.disabled = true;

@@ -113,7 +113,8 @@ module.exports = {
   async saveSquad(id, values) {
     const c = clubs.find((x) => x.id === id);
     const squad = players.filter((p) => p.club === c.name);
-    for (const p of squad) Object.assign(p.status, values);
+    const { bans, ...status } = values;
+    for (const p of squad) { Object.assign(p.status, status); if (bans) p.health.bans = []; }
     return { ok: true, players: squad.length };
   },
   async nations() {
