@@ -1,4 +1,7 @@
 {
+  "0.3.9": [
+    "What's new shows every version you missed, also when updating from before 0.3.6"
+  ],
   "0.3.8": [
     "The in-game pencil opens the editor on what FM is showing: a player's profile opens that player, a club's page opens that club, and the Portal opens your club",
     "The in-game button updates itself when the editor updates (with FM closed)"
