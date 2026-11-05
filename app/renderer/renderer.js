@@ -821,6 +821,90 @@ document.querySelectorAll('.bg-option').forEach((b) => b.addEventListener('click
   window.api.saveSettings({ background: b.dataset.bg });
 }));
 
+// --- Date picker ---
+// Clicking a date box opens the editor's own calendar: the year, then the month, each with arrows,
+// then the days. Typing a date still works, and the box keeps its yyyy-mm-dd value and min/max.
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const datePicker = h('div', { class: 'datepick hidden', role: 'dialog' });
+document.body.append(datePicker);
+let pickFor = null, pickView = null; // the date box, and the { y, m } on show
+const isoDate = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+const daysIn = (y, m) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+
+function renderDatePicker() {
+  const { y, m } = pickView, min = pickFor.min || '', max = pickFor.max || '';
+  const inRange = (first, last) => (!min || last >= min) && (!max || first <= max);
+  const go = (dy, dm) => {
+    const t = new Date(Date.UTC(y + dy, m + dm, 1));
+    let v = { y: t.getUTCFullYear(), m: t.getUTCMonth() };
+    // Stepping a year can land outside the range; show the nearest month that's allowed.
+    if (min && isoDate(v.y, v.m, daysIn(v.y, v.m)) < min) v = { y: +min.slice(0, 4), m: +min.slice(5, 7) - 1 };
+    if (max && isoDate(v.y, v.m, 1) > max) v = { y: +max.slice(0, 4), m: +max.slice(5, 7) - 1 };
+    pickView = v;
+    renderDatePicker();
+  };
+  const arrow = (text, title, ok, fn) => h('button', { type: 'button', class: 'dp-arrow', title, disabled: !ok, onclick: fn }, text);
+  const monthOk = (dm) => { const t = new Date(Date.UTC(y, m + dm, 1)); const ty = t.getUTCFullYear(), tm = t.getUTCMonth(); return inRange(isoDate(ty, tm, 1), isoDate(ty, tm, daysIn(ty, tm))); };
+  const yearOk = (dy) => inRange(`${y + dy}-01-01`, `${y + dy}-12-31`);
+  const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7; // Monday first
+  const days = [];
+  for (let i = 0; i < lead; i++) days.push(h('span'));
+  for (let d = 1; d <= daysIn(y, m); d++) {
+    const v = isoDate(y, m, d);
+    const cls = ['dp-day', v === pickFor.value && 'sel', v === gameToday && 'today'].filter(Boolean).join(' ');
+    days.push(h('button', { type: 'button', class: cls, disabled: !!((min && v < min) || (max && v > max)), title: v === gameToday ? "Today in FM" : null, onclick: () => pickDate(v) }, String(d)));
+  }
+  datePicker.replaceChildren(
+    h('div', { class: 'dp-row dp-year' }, arrow('‹', 'Previous year', yearOk(-1), () => go(-1, 0)), h('b', {}, String(y)), arrow('›', 'Next year', yearOk(1), () => go(1, 0))),
+    h('div', { class: 'dp-row dp-month' }, arrow('‹', 'Previous month', monthOk(-1), () => go(0, -1)), h('b', {}, MONTHS[m]), arrow('›', 'Next month', monthOk(1), () => go(0, 1))),
+    h('div', { class: 'dp-days' }, ...['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => h('span', { class: 'dp-dow' }, d)), ...days),
+    h('div', { class: 'dp-foot' }, h('button', { type: 'button', class: 'btn', onclick: () => pickDate('') }, 'Clear')),
+  );
+}
+
+function pickDate(v) {
+  const input = pickFor;
+  closeDatePicker();
+  input.value = v;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function openDatePicker(input) {
+  pickFor = input;
+  const from = input.value || gameToday || (input.min && input.min > '2001' ? input.min : new Date().toISOString().slice(0, 10));
+  pickView = { y: +from.slice(0, 4), m: +from.slice(5, 7) - 1 };
+  renderDatePicker();
+  datePicker.classList.remove('hidden');
+  // Below the box, or above it when there's no room underneath.
+  const r = input.getBoundingClientRect(), w = datePicker.offsetWidth, ht = datePicker.offsetHeight;
+  datePicker.style.left = `${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px`;
+  datePicker.style.top = `${r.bottom + 6 + ht > innerHeight && r.top - 6 - ht > 0 ? r.top - 6 - ht : r.bottom + 6}px`;
+}
+
+function closeDatePicker() {
+  datePicker.classList.add('hidden');
+  pickFor = null;
+}
+
+document.addEventListener('mousedown', (e) => {
+  const input = e.target.closest?.('input[type="date"]');
+  if (input && !input.disabled) {
+    e.preventDefault();
+    input.focus();
+    if (pickFor === input) closeDatePicker(); else openDatePicker(input);
+  } else if (pickFor && !datePicker.contains(e.target)) closeDatePicker();
+}, true);
+document.addEventListener('keydown', (e) => {
+  if (pickFor && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); const input = pickFor; closeDatePicker(); input.focus(); return; }
+  const input = e.target.closest?.('input[type="date"]');
+  if (input && (e.key === 'Enter' || (e.altKey && e.key === 'ArrowDown'))) { e.preventDefault(); openDatePicker(input); }
+}, true);
+// Typing in the box keeps an open calendar in step.
+document.addEventListener('input', (e) => { if (pickFor && e.target === pickFor && pickFor.value) { pickView = { y: +pickFor.value.slice(0, 4), m: +pickFor.value.slice(5, 7) - 1 }; renderDatePicker(); } });
+addEventListener('resize', closeDatePicker);
+document.addEventListener('scroll', (e) => { if (pickFor && !datePicker.contains(e.target)) closeDatePicker(); }, true);
+
 // --- What's new (after an app update) ---
 async function showWhatsNew() {
   const w = await window.api.whatsNew();
