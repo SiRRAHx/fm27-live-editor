@@ -678,7 +678,7 @@ function updateMove() {
   btn.textContent = { deal: 'Agree transfer', move: 'Move player', loan: 'Loan player', swap: 'Swap players', release: 'Release player' }[mode];
   const hints = {
     deal: "FM agrees the deal as if both clubs had made it: it's on his Transfer tab and in the news, and he joins on that date. The whole fee is paid that day and shows in both clubs' finances. The buying club's transfer budget drops by the fee now.",
-    move: "He joins the club's first team straight away and for free, on his current contract unless you set a new wage or end date. To pay a fee, use Transfer. Some squads have no spare room in memory; then the editor says so and a swap is the way in.",
+    move: "He joins the club's first team straight away and for free, on his current contract unless you set a new wage or end date. To pay a fee, use Transfer.",
     loan: "FM makes the loan itself, as if both clubs had agreed it: he joins the loan club's first team, stays under contract with his club and returns when the loan ends. The wage share is how much of his wage the loan club pays.",
     swap: "Each player joins the other's club on his own contract. This works even when both squads are full.",
     release: 'He leaves his club and becomes a free agent, with no contract.',
