@@ -167,14 +167,15 @@ public static class FutureTransfer
         var code = stub.ToArray();
         BitConverter.GetBytes(fail - (failJump + 6)).CopyTo(code, failJump + 2);
 
-        var data = new byte[0x100];
-        f.CopyTo(data, 0);
         Backup.EnsureBackedUp();
         string name = Players.Summary(p)?.name ?? "The player", to = Players.TeamClub(team) ?? "the new club";
         Log.Info($"Agreeing a transfer: player 0x{p:X} to team 0x{team:X} for {req.fee} on {date:yyyy-MM-dd}");
+        var before = AgreedOffers(mod, p, team);
+        var data = new byte[0x100];
+        f.CopyTo(data, 0);
         Mem.CallInGame(code, data, 15000);
 
-        long offer = FindOffer(mod, p, team);
+        long offer = AgreedOffers(mod, p, team).FirstOrDefault(o => !before.Contains(o));
         if (offer == 0) throw new EditorError($"FM didn't agree the move, so {name} stays where he is.", 409);
         var flags = Mem.Read(offer + OfferFlagsAt, 4);
         if (flags != null && (BitConverter.ToUInt32(flags, 0) & FromDatabase) != 0)
@@ -245,23 +246,26 @@ public static class FutureTransfer
         Mem.CallInGame(stub.ToArray(), data, 15000);
     }
 
-    // The agreed offer FM just made for him, searching the newest offers first.
-    static long FindOffer(long mod, long p, long team)
+    // Every agreed transfer of him to that team. FM's list isn't in the order offers were made
+    // (Cunha's new deals were at 6,167 of 17,040), so the whole list is searched.
+    static System.Collections.Generic.List<long> AgreedOffers(long mod, long p, long team)
     {
+        var found = new System.Collections.Generic.List<long>();
         long table = Mem.ReadPtr(mod + Offers);
         var head = table == 0 ? null : Mem.Read(table + 8, 16);
-        if (head == null) return 0;
+        if (head == null) return found;
         long b = BitConverter.ToInt64(head, 0), e = BitConverter.ToInt64(head, 8);
-        if (b == 0 || e < b || (e - b) % 8 != 0) return 0;
-        long n = (e - b) / 8, stop = Math.Max(0, n - 500);
-        for (long i = n - 1; i >= stop; i--)
+        if (b == 0 || e < b || (e - b) % 8 != 0 || (e - b) / 8 > 1_000_000) return found;
+        var ptrs = Mem.Read(b, (int)(e - b));
+        if (ptrs == null) return found;
+        for (int i = 0; i < ptrs.Length; i += 8)
         {
-            long o = Mem.ReadPtr(b + i * 8);
+            long o = BitConverter.ToInt64(ptrs, i);
             var r = o == 0 ? null : Mem.Read(o, OfferStatusAt + 1);
             if (r == null || BitConverter.ToInt64(r, OfferPlayerAt) != p || BitConverter.ToInt64(r, OfferBuyerAt) != team || r[OfferStatusAt] != Agreed) continue;
-            if (LoanStart.ClassOf(mod, BitConverter.ToInt64(r, 0)) == ".?AVFULL_TRANSFER_OFFER@@") return o;
+            if (LoanStart.ClassOf(mod, BitConverter.ToInt64(r, 0)) == ".?AVFULL_TRANSFER_OFFER@@") found.Add(o);
         }
-        return 0;
+        return found;
     }
 
     // The share of sales the selling club's board gives back to its budget, or none if unreadable.

@@ -1,4 +1,7 @@
 {
+  "0.3.13": [
+    "Agree transfer no longer says FM didn't agree when the deal went through, which could leave duplicate deals with no fee paid"
+  ],
   "0.3.12": [
     "The ability boxes on a player's page line up again"
   ],
