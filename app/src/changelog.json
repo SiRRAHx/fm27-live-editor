@@ -1,4 +1,7 @@
 {
+  "0.3.11": [
+    "Transfer and Loan buttons on a player's page open that tab with him already picked"
+  ],
   "0.3.10": [
     "Whole squad can remove every ban at the club",
     "Bank balance and transfer budget go up to 1 billion, and ability fields show their 1–200 range",

@@ -620,7 +620,7 @@ function picker(box, placeholder, search, label, onPick) {
     }
   };
   show(null);
-  return { clear: () => { show(null); onPick(null); } };
+  return { clear: () => { show(null); onPick(null); }, set: (row) => { show(row); onPick(row); } };
 }
 
 let mode = 'deal';
@@ -803,6 +803,14 @@ async function refreshTransfers() {
   } catch { /* the game isn't ready yet */ }
 }
 document.querySelector('[data-tab=transfers]').addEventListener('click', refreshTransfers);
+
+// The player page's Transfer and Loan buttons open that tab with him already picked.
+document.querySelectorAll('[data-move]').forEach((b) => b.addEventListener('click', () => {
+  if (!current) return;
+  document.querySelector('.nav[data-tab=transfers]').click();
+  document.querySelector(`#move-tabs [data-mode=${b.dataset.move}]`).click();
+  pickers.player.set(current);
+}));
 
 // --- Appearance ---
 function applyTheme(theme = 'emerald') {
