@@ -2,6 +2,22 @@
 
 game_plugin.dll 27.0 dated 2 Nov 2026. Addresses are rvas.
 
+**10 Nov 2026 build.** The addresses below are the 2 Nov build's. FM's update moved them; found by lining the new processor up with the old disassembly (difflib on instructions, 588 of 914 matched) and confirming in the running game by class name. Data moved by about −0x2CBFE0 throughout; code by varying amounts. Form and offer layouts are unchanged (the constructor sets the same defaults).
+
+| What | 2 Nov | 10 Nov |
+|---|---|---|
+| Processor | 0xBF6270 | 0xB7A9A0 (stack 0xB8, was 0xA8) |
+| Table global | 0x56841A8 | 0x53B81C8 |
+| Table class (DATABASE_TABLE<STARTING_FUTURE_TRANSFER>) | 0x4C5EF08 | 0x49F73C8 |
+| Form pool / alloc | 0x56837D0 / 0x14FA40 | 0x53B77F0 / 0xCFB60 |
+| Form ctor | 0xD08AA0 | 0xC83BD0 |
+| List insert (unique_ptr vector) | 0xDD99F0 | 0xD43220 |
+| Offers global | 0x5672240 | 0x53A6240 |
+| Cross-border check | 0x1CEE1F0 | 0x1BC44B0 |
+| Already-happened path | 0xBFB930 | 0xB7FE70 |
+
+FM's own "make a start-up transfer form" helper is at 0xC9E5C0 in the new build (allocates 0xA0 from the form pool and fills it from its arguments). Instalment addresses (new, delete, instalment insert) aren't found in the new build yet.
+
 ## How the editor agrees a transfer
 
 FM's start-up code turns database future transfers into real deals. `core/FutureTransfer.cs` hands it one.
@@ -119,3 +135,5 @@ FM's start-up code turns database future transfers into real deals. `core/Future
 ### Other clauses (not done)
 
 - Sell-ons, appearance fees and the like live in the club's +0xB0 list, as db INFO objects with vtables. They need their own work.
+
+Loans on the 10 Nov build: start-loan code found by Addresses at 0xB7CD80; only its stack frame changed (sub rsp 0x188 -> 0x198), form offsets read are unchanged, so only the signature in LoanStart.cs was updated. Tested: Mainoo loaned to Al Hilal 2 Dec 2026 - 30 Jun 2027.

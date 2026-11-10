@@ -3,12 +3,13 @@
 // turns it into a real agreed transfer (a FULL_TRANSFER_OFFER) that FM then completes on that
 // date like any deal made in the game.
 //
-// FM's processor (rva 0xBF6270) walks the start-up table (global 0x56841A8, list at +0x80) and
+// FM's processor (rva 0xB7A9A0) walks the start-up table (global 0x53B81C8, list at +0x80) and
 // clears it when done, so the form has to come from FM's own pool: the call below allocates it
-// there (0x14FA40 on pool 0x56837D0), runs FM's constructor (0xD08AA0), copies our fields in,
-// adds it to the table with FM's own list code (0xDD99F0) and runs the processor with the game
-// object. The addresses are for game_plugin.dll 27.0 dated 2 Nov 2026 (research/transfers.md);
-// each is checked against the code it should hold before anything is called.
+// there (0xCFB60 on pool 0x53B77F0), runs FM's constructor (0xC83BD0), copies our fields in,
+// adds it to the table with FM's own list code (0xD43220) and runs the processor with the game
+// object. The addresses are for game_plugin.dll dated 10 Nov 2026, found by lining FM's code up
+// with the 2 Nov build's (research/transfers.md); each is checked against the code it should hold
+// before anything is called.
 //
 // FM marks offers made from the database with flag 0x2000 (offer +0x30), and when such a deal
 // completes it moves the player but no money. Clearing the flag afterwards makes it a normal
@@ -43,13 +44,17 @@ public static class FutureTransfer
         public System.Collections.Generic.Dictionary<string, string> patch { get; set; } // research only: form offset (hex) -> bytes (hex)
     }
 
-    const long Alloc = 0x14FA40, Pool = 0x56837D0, Ctor = 0xD08AA0, Grow = 0xDD99F0, Process = 0xBF6270, Table = 0x56841A8, TableClass = 0x4C5EF08;
+    const long Alloc = 0xCFB60, Pool = 0x53B77F0, Ctor = 0xC83BD0, Grow = 0xD43220, Process = 0xB7A9A0, Table = 0x53B81C8, TableClass = 0x49F73C8;
     static readonly (long at, byte[] code)[] Code =
     {
         (Alloc, Convert.FromHexString("4156565753")),
         (Ctor, Convert.FromHexString("55564883EC28488D6C2420")),
         (Grow, Convert.FromHexString("41574156415541545657555348")),
-        (Process, Convert.FromHexString("4157415641554154565755534881ECA8")),
+        (Process, Convert.FromHexString("4157415641554154565755534881ECB8")),
+    };
+    // Only for instalments (research only). Still the 2 Nov build's: not found in this one yet.
+    static readonly (long at, byte[] code)[] InstalmentCode =
+    {
         (New, Convert.FromHexString("40534883EC20488B")),
         (Delete, Convert.FromHexString("E903BA3900")),
         (InstalmentGrow, Convert.FromHexString("4157415641554154565755534883EC28")),
@@ -59,9 +64,9 @@ public static class FutureTransfer
     const int Size = 0xA0, CopyFrom = 0x18;
     const int PersonAt = 0x60, ToTeamAt = 0x68, FromTeamAt = 0x70, DateAt = 0x80, FeeAt = 0x84, DealAt = 0x9C;
     const int TeamAt = -0x158;
-    // FM's offers: [rva 0x5672240] +8 is a vector of them. Offer +0x30 flags, +0x38 player,
+    // FM's offers: [rva 0x53A6240] +8 is a vector of them. Offer +0x30 flags, +0x38 player,
     // +0x40 buying team, +0x8D status (0x13 agreed).
-    const long Offers = 0x5672240;
+    const long Offers = 0x53A6240;
     const int ShareAt = 0x7D0;
     const int OfferFlagsAt = 0x30, OfferPlayerAt = 0x38, OfferBuyerAt = 0x40, OfferStatusAt = 0x8D, Agreed = 0x13, FromDatabase = 0x2000;
 
@@ -100,6 +105,8 @@ public static class FutureTransfer
         // FM counts the editor's instalment records down but doesn't pay them (research/transfers.md),
         // so they stay research only until the payment side is found.
         if (req.months != 0 && !Research.On) throw new EditorError("Instalments aren't available yet. The whole fee is paid when he joins.", 400);
+        if (req.months > 0 && InstalmentCode.Any(c => Mem.Read(mod + c.at, c.code.Length) is not { } b || !b.SequenceEqual(c.code)))
+            throw new EditorError("Instalments aren't available in this version of FM yet.", 409);
         if (req.months < 0 || req.months > MaxMonths) throw new EditorError($"Instalments can be paid over 0 to {MaxMonths} months.", 400);
         if (req.months == 0) upFront = req.fee;
         if (upFront < 0 || upFront > req.fee) throw new EditorError("The amount paid up front must be between 0 and the fee.", 400);
@@ -111,7 +118,7 @@ public static class FutureTransfer
         if (req.fee > 0 && (buyerFin == 0 || sellerFin == 0)) throw new EditorError("One of the clubs has no finances, so no fee can be paid. Set the fee to 0.", 400);
         int share = ClubShare(sellerFin); // the selling board's own share of sales
 
-        // The form as FM's constructor leaves it (0xD08AA0), then our values. Only +0x18 on is copied.
+        // The form as FM's constructor leaves it (0xC83BD0), then our values. Only +0x18 on is copied.
         var f = new byte[Size];
         BitConverter.GetBytes(0x076C0001).CopyTo(f, 0x80);
         BitConverter.GetBytes(0x076C0001076C0001).CopyTo(f, 0x8C);

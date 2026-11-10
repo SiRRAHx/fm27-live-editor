@@ -1,4 +1,7 @@
 {
+  "0.3.14": [
+    "Transfers and loans work again after FM's 10 Nov update"
+  ],
   "0.3.13": [
     "Agree transfer no longer says FM didn't agree when the deal went through, which could leave duplicate deals with no fee paid"
   ],

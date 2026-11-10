@@ -11,7 +11,7 @@ namespace FM27LiveEditor;
 [BepInPlugin("com.local.fm27liveeditor", "FM27 Live Editor", Version)]
 public class Plugin : BasePlugin
 {
-    public const string Version = "0.3.13";
+    public const string Version = "0.3.14";
     internal static ManualLogSource Logger;
 
     public override void Load()
